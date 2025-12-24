@@ -103,7 +103,6 @@
         const TOTAL_ITEM_WIDTH = CARD_WIDTH + (CARD_MARGIN_X * 2); 
 
         // -- DATA BOXES / CASES --
-        // Kita menggunakan data yang sama untuk Case & Mystery Box agar konsisten isinya
         const CASES = [
           {
             id: 'case_coffee',
@@ -189,22 +188,22 @@
             icon: <BoxIcon size={40} className="text-yellow-500" strokeWidth={1.5} />,
             desc: 'Ultimate fortune inside.',
             pool: [
-              { id: 'gd1', name: "Golden Guard", rarity: "rare", tier: 4, sellPrice: 5000, img: "https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?auto=format&fit=crop&q=80&w=400" },
-              { id: 'gd2', name: "Fallen Angel", rarity: "epic", tier: 5, sellPrice: 30000, img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400" },
-              { id: 'gd3', name: "Seraphim", rarity: "legendary", tier: 6, sellPrice: 120000, img: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&q=80&w=400" },
-              { id: 'gd4', name: "THE CREATOR", rarity: "legendary", tier: 7, sellPrice: 250000, img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400" },
-              { id: 'gd5', name: "VOID WALKER", rarity: "legendary", tier: 7, sellPrice: 500000, img: "https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?auto=format&fit=crop&q=80&w=400" },
+              { id: 'gd1', name: "Plenger Gank", rarity: "legendary", tier: 8, sellPrice: 150000, img: "https://lh3.googleusercontent.com/d/1uw5yq1fu1ssZ7BHj0EE3m8z-M0lF3OKc=w1000?authuser=0" },
+              { id: 'gd2', name: "AlvanTron", rarity: "legendary", tier: 8, sellPrice: 250000, img: "https://lh3.googleusercontent.com/d/1LQ8M27aj-XyfO2JVDYTp9PvgwIObNifr=w1000?authuser=0" },
+              { id: 'gd3', name: "Danish Ferrari", rarity: "legendary", tier: 8, sellPrice: 450000, img: "https://lh3.googleusercontent.com/d/1jOhjQlY2Rn-KNxNf7sCCS0XMCWN8gzkV=w1000?authuser=0" },
+              { id: 'gd4', name: "Rey Mafia", rarity: "legendary", tier: 8, sellPrice: 550000, img: "https://lh3.googleusercontent.com/d/1sOoiLG-Wk5JTlKPiGqT4KbcZlw2Z350F=w1000?authuser=0" },
+              { id: 'gd5', name: "Alvan Satpam", rarity: "legendary", tier: 8, sellPrice: 100000, img: "https://lh3.googleusercontent.com/d/1bUKbdYYsM8ZkfS5cioCc8YDF7HLWkLbu=w1000?authuser=0" },
+              // VOID RANK ITEM
+              { id: 'gd6', name: "Ken Alone", rarity: "void", tier: 10, sellPrice: 1000000, img: "https://lh3.googleusercontent.com/d/1hDolHpMu6auI5OrNaCwGRF3xh5zezpCZ=w1000?authuser=0" },
             ]
           }
         ];
 
         // --- KONFETI COMPONENT ---
-        // Membuat efek ledakan partikel warna-warni
         const ConfettiExplosion = () => {
-            // Generate 30 partikel dengan arah (tx, ty) dan warna acak
             const particles = Array.from({ length: 30 }).map((_, i) => {
-                const angle = Math.random() * 360; // Sudut acak
-                const distance = 100 + Math.random() * 200; // Jarak ledakan (px)
+                const angle = Math.random() * 360; 
+                const distance = 100 + Math.random() * 200; 
                 const tx = Math.cos(angle * Math.PI / 180) * distance + 'px';
                 const ty = Math.sin(angle * Math.PI / 180) * distance + 'px';
                 const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFFFFF'];
@@ -236,34 +235,26 @@
           const [balance, setBalance] = useState(INITIAL_BALANCE);
           const [inventory, setInventory] = useState([]);
           
-          // State Global
           const [currentCase, setCurrentCase] = useState(CASES[0]);
           const [isProcessing, setIsProcessing] = useState(false);
           const [winner, setWinner] = useState(null);
           const [showTopUp, setShowTopUp] = useState(false);
           const [showReward, setShowReward] = useState(false);
           
-          // State Khusus Case Reel
           const [spinItems, setSpinItems] = useState([]);
           const [containerWidth, setContainerWidth] = useState(0);
           const railRef = useRef(null);
           const containerRef = useRef(null);
 
-          // State Khusus Mystery Box
-          // idle: Siap beli
-          // purchased: Sudah dibeli, box muncul & getar, menunggu klik user
-          // opening: Sedang animasi meledak
           const [boxPhase, setBoxPhase] = useState('idle'); 
-          const [pendingWinner, setPendingWinner] = useState(null); // Simpan pemenang sementara
+          const [pendingWinner, setPendingWinner] = useState(null); 
 
-          // Settings
           const [soundEnabled, setSoundEnabled] = useState(true);
           const [infoCase, setInfoCase] = useState(null);
           
           const audioCtxRef = useRef(null);
           const soundTimeoutRef = useRef(null);
 
-          // Init Reel Items
           useEffect(() => {
             const pool = currentCase.pool;
             const initialItems = Array(15).fill(null).map(() => pool[Math.floor(Math.random() * pool.length)]);
@@ -288,34 +279,66 @@
             };
           }, []);
 
-          // --- LOGIC UMUM ---
           const calculateRates = (pool) => {
+            // Cek ketersediaan rarity di pool
             const hasCommon = pool.some(i => i.rarity === 'common');
             const hasRare = pool.some(i => i.rarity === 'rare');
             const hasEpic = pool.some(i => i.rarity === 'epic');
             const hasLegendary = pool.some(i => i.rarity === 'legendary');
-            let rates = { common: 0, rare: 0, epic: 0, legendary: 0 };
+            const hasVoid = pool.some(i => i.rarity === 'void');
+
+            let rates = { common: 0, rare: 0, epic: 0, legendary: 0, void: 0 };
+
+            // Khusus Plenger Case (Void & Legendary Only)
+            if (hasVoid && !hasCommon && !hasRare && !hasEpic) {
+                return { common: 0, rare: 0, epic: 0, legendary: 67, void: 33 };
+            }
+
+            // Logic standard
             if (hasCommon) rates.common += 50; else if (hasRare) rates.rare += 50; else if (hasEpic) rates.epic += 50; else rates.legendary += 50;
             if (hasRare) rates.rare += 35; else if (hasEpic) rates.epic += 35; else if (hasLegendary) rates.legendary += 35; else rates.common += 35;
             if (hasEpic) rates.epic += 12; else if (hasLegendary) rates.legendary += 12; else rates.rare += 12;
             if (hasLegendary) rates.legendary += 3; else rates.epic += 3;
+            
             return rates;
           };
 
+          // --- LOGIC PROBABILITAS BARU ---
           const getRandomAgent = () => {
             const rand = Math.random() * 100;
             const pool = currentCase.pool;
+            
+            // Logic Khusus PLENGER BOX (Case God)
+            // 33% Void, 67% Legendary (Sisa)
+            if (currentCase.id === 'case_god') {
+                if (rand < 33) {
+                    const voidItems = pool.filter(a => a.rarity === 'void');
+                    if (voidItems.length > 0) return { ...voidItems[Math.floor(Math.random() * voidItems.length)], instanceId: Date.now() + Math.random() };
+                }
+                // Fallback ke Legendary jika rand > 33
+                const legendaryItems = pool.filter(a => a.rarity === 'legendary');
+                return { ...legendaryItems[Math.floor(Math.random() * legendaryItems.length)], instanceId: Date.now() + Math.random() };
+            }
+
+            // Logic Default (God Mode 99% Legendary untuk case lain jika diminta, 
+            // tapi karena user minta spesifik untuk plenger, case lain kita kembalikan ke normal logic atau biarkan 99% legendary jika mau)
+            // Asumsi: User hanya minta ubah Plenger, case lain tetap normal gacha logic
+            
             const common = pool.filter(a => a.rarity === 'common');
             const rare = pool.filter(a => a.rarity === 'rare');
             const epic = pool.filter(a => a.rarity === 'epic');
             const legendary = pool.filter(a => a.rarity === 'legendary');
+
             let selectedPool = [];
+
             if (rand < 50 && common.length > 0) selectedPool = common;
             else if (rand < 85 && rare.length > 0) selectedPool = rare;
             else if (rand < 97 && epic.length > 0) selectedPool = epic;
             else if (legendary.length > 0) selectedPool = legendary;
             else selectedPool = pool; 
+
             if (selectedPool.length === 0) selectedPool = pool;
+
             const baseAgent = selectedPool[Math.floor(Math.random() * selectedPool.length)];
             return { ...baseAgent, instanceId: Date.now() + Math.random() };
           };
@@ -332,7 +355,6 @@
             setCurrentCase(CASES[prevIndex]);
           };
 
-          // --- AUDIO ---
           const initAudio = () => {
             if (!audioCtxRef.current) { audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)(); }
             if (audioCtxRef.current.state === 'suspended') { audioCtxRef.current.resume(); }
@@ -357,7 +379,6 @@
           };
 
           const playShakingSound = () => {
-             // Suara getar halus
              if (!soundEnabled || !audioCtxRef.current) return;
              const ctx = audioCtxRef.current;
              const osc = ctx.createOscillator();
@@ -374,20 +395,15 @@
           };
 
           const playPopSound = () => {
-             // Suara Pop / Party Popper
              if (!soundEnabled || !audioCtxRef.current) return;
              const ctx = audioCtxRef.current;
              const osc = ctx.createOscillator();
              const gain = ctx.createGain();
-             
-             // High pitch sweep down fast
              osc.type = 'triangle';
              osc.frequency.setValueAtTime(800, ctx.currentTime);
              osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.2);
-             
              gain.gain.setValueAtTime(0.3, ctx.currentTime);
              gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-             
              osc.connect(gain);
              gain.connect(ctx.destination);
              osc.start();
@@ -412,11 +428,15 @@
             if (!soundEnabled || !audioCtxRef.current) return;
             const ctx = audioCtxRef.current;
             const now = ctx.currentTime;
-            if (rarity === 'legendary' || rarity === 'epic') {
+            
+            // VOID & LEGENDARY SOUNDS
+            if (rarity === 'void' || rarity === 'legendary' || rarity === 'epic') {
                 setTimeout(() => {
-                    if (rarity === 'legendary') speakCongratulation("LEGENDARY... !");
+                    if (rarity === 'void') speakCongratulation("VOID... RANK... UNLOCKED...!");
+                    else if (rarity === 'legendary') speakCongratulation("LEGENDARY... !");
                     else speakCongratulation("EPIC... DROP... !");
                 }, 200);
+                
                 const boomOsc = ctx.createOscillator();
                 const boomGain = ctx.createGain();
                 boomOsc.type = 'square';
@@ -455,7 +475,6 @@
             }, currentDelay);
           };
 
-          // --- SPIN LOGIC (CASE OPENING) ---
           const handleSpin = () => {
             if (isProcessing) return;
             if (balance < currentCase.price) { setShowTopUp(true); return; }
@@ -511,9 +530,6 @@
             }, 6500); 
           };
 
-          // --- BOX LOGIC (MYSTERY BOX) ---
-          
-          // Step 1: Beli Box -> Masuk fase "purchased" (Box Getar)
           const handleBuyBox = () => {
             if (isProcessing) return;
             if (balance < currentCase.price) { setShowTopUp(true); return; }
@@ -524,30 +540,26 @@
             setWinner(null);
             setShowReward(false);
             
-            // Tentukan pemenang sekarang, tapi simpan dulu
             const winningAgent = getRandomAgent();
             setPendingWinner(winningAgent);
             
-            // Masuk fase menunggu interaksi user
             setBoxPhase('purchased');
             playShakingSound();
           };
 
-          // Step 2: User Klik Box Getar -> Buka (Open)
           const handleOpenBox = () => {
             if (boxPhase !== 'purchased') return;
 
-            setBoxPhase('opening'); // Trigger animasi ledakan
-            playPopSound(); // Suara "Pop"
-            playWinSound(pendingWinner.rarity); // Suara Win/Announcer
+            setBoxPhase('opening'); 
+            playPopSound(); 
+            playWinSound(pendingWinner.rarity); 
             
-            // Tampilkan reward setelah animasi pop selesai (sekitar 500ms)
             setTimeout(() => {
                 setWinner(pendingWinner);
                 setInventory(prev => [pendingWinner, ...prev]);
                 setShowReward(true);
                 setIsProcessing(false);
-                setBoxPhase('idle'); // Reset ke idle untuk pembelian selanjutnya
+                setBoxPhase('idle'); 
                 setPendingWinner(null);
             }, 800);
           };
@@ -568,8 +580,6 @@
 
           return (
             <div className="min-h-screen pb-20 overflow-x-hidden touch-manipulation">
-              
-              {/* HEADER */}
               <header className="border-b border-gray-900 bg-black/90 backdrop-blur-md sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 py-3 md:py-4 flex flex-col md:flex-row justify-between items-center gap-3 md:gap-4">
                   <div className="flex items-center gap-2">
@@ -580,25 +590,10 @@
                       DARK<span className="text-red-600">CASE</span>
                     </h1>
                   </div>
-                  
-                  {/* NAVIGATION TABS */}
                   <div className="flex bg-gray-900/80 p-1 rounded-full border border-gray-800">
-                    <button 
-                        onClick={() => !isProcessing && setActiveTab('cases')}
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === 'cases' ? 'bg-red-600 text-black shadow-lg' : 'text-gray-400 hover:text-white'}`}
-                        disabled={isProcessing}
-                    >
-                        CASE OPENING
-                    </button>
-                    <button 
-                        onClick={() => !isProcessing && setActiveTab('box')}
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === 'box' ? 'bg-amber-500 text-black shadow-lg' : 'text-gray-400 hover:text-white'}`}
-                        disabled={isProcessing}
-                    >
-                        MYSTERY BOX
-                    </button>
+                    <button onClick={() => !isProcessing && setActiveTab('cases')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === 'cases' ? 'bg-red-600 text-black shadow-lg' : 'text-gray-400 hover:text-white'}`} disabled={isProcessing}>CASE OPENING</button>
+                    <button onClick={() => !isProcessing && setActiveTab('box')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === 'box' ? 'bg-amber-500 text-black shadow-lg' : 'text-gray-400 hover:text-white'}`} disabled={isProcessing}>MYSTERY BOX</button>
                   </div>
-
                   <div className="flex items-center gap-2 md:gap-4">
                     <button onClick={() => setSoundEnabled(!soundEnabled)} className={`p-2 rounded-full border transition-all ${soundEnabled ? 'bg-gray-800 border-gray-700 text-green-400' : 'bg-red-900/20 border-red-900 text-red-500'}`}>
                         {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
@@ -615,18 +610,14 @@
               </header>
 
               <main className="max-w-7xl mx-auto px-4 mt-6 md:mt-8 space-y-8 md:space-y-12">
-                
-                {/* --- CASE SELECTOR --- */}
                 <section className="max-w-4xl mx-auto">
                     <div className="flex items-center justify-center gap-2 md:gap-8">
                         <button onClick={handlePrevCase} disabled={isProcessing} className="p-3 bg-zinc-900 hover:bg-zinc-800 rounded-full border border-gray-800 disabled:opacity-30 transition-all active:scale-95">
                             <ChevronLeft size={24} className="text-white" />
                         </button>
-
                         <div className={`relative w-full max-w-md p-6 rounded-xl border-2 text-center transition-all duration-300 ${currentCase.color} bg-zinc-900/90 shadow-2xl`}>
                              <button onClick={() => setInfoCase(currentCase)} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors z-20 bg-black/50 p-1 rounded-full border border-gray-700"><Info size={20} /></button>
                              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#050505] p-2 rounded-full border border-gray-800">
-                                 {/* Icon changes based on mode */}
                                  {activeTab === 'cases' ? currentCase.icon : <Package size={40} className={currentCase.iconColor} strokeWidth={1.5} />}
                              </div>
                              <div className="mt-4">
@@ -638,7 +629,6 @@
                                 </div>
                              </div>
                         </div>
-
                         <button onClick={handleNextCase} disabled={isProcessing} className="p-3 bg-zinc-900 hover:bg-zinc-800 rounded-full border border-gray-800 disabled:opacity-30 transition-all active:scale-95">
                             <ChevronRight size={24} className="text-white" />
                         </button>
@@ -650,11 +640,8 @@
                     </div>
                 </section>
 
-                {/* --- DISPLAY AREA (SWITCHABLE) --- */}
                 <section className="relative pt-4 md:pt-8 pb-4 min-h-[350px] flex flex-col justify-center">
-                  
                   {activeTab === 'cases' ? (
-                    /* --- CASE OPENING MODE (Reel) --- */
                     <div className="relative max-w-5xl mx-auto w-full">
                         <div className="absolute left-1/2 -translate-x-1/2 top-0 z-30 flex flex-col items-center pointer-events-none">
                            <div className="w-0 h-0 border-l-[10px] md:border-l-[12px] border-l-transparent border-r-[10px] md:border-r-[12px] border-r-transparent border-t-[16px] md:border-t-[20px] border-t-red-600 drop-shadow-lg"></div>
@@ -673,9 +660,7 @@
                         </div>
                     </div>
                   ) : (
-                    /* --- MYSTERY BOX MODE --- */
                     <div className="flex flex-col items-center justify-center w-full h-[300px] relative">
-                        {/* Phase 1: Idle (Belum Beli) */}
                         {boxPhase === 'idle' && (
                             <div className={`transform transition-all duration-300 hover:scale-105 cursor-pointer opacity-70 hover:opacity-100`} onClick={handleBuyBox}>
                                 <div className={`w-40 h-40 ${currentCase.bg} rounded-3xl border-4 ${currentCase.color} border-dashed flex items-center justify-center`}>
@@ -684,65 +669,38 @@
                                 <div className="text-center mt-4 text-gray-500 text-xs tracking-widest font-mono">PURCHASE TO REVEAL</div>
                             </div>
                         )}
-
-                        {/* Phase 2: Purchased (Box Muncul & Bergetar - KLIK DISINI!) */}
                         {boxPhase === 'purchased' && (
-                            <div 
-                                className="animate-shake relative group" 
-                                onClick={handleOpenBox} 
-                                title="Klik untuk membuka!"
-                            >
+                            <div className="animate-shake relative group" onClick={handleOpenBox} title="Klik untuk membuka!">
                                 <div className={`w-56 h-56 bg-zinc-900 rounded-3xl border-4 ${currentCase.color} flex items-center justify-center shadow-[0_0_80px_rgba(255,255,255,0.15)]`}>
                                     <Package size={100} className="text-white drop-shadow-lg" strokeWidth={1.5} />
                                 </div>
-                                {/* Tooltip "TAP!" */}
                                 <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-red-600 text-white font-black text-xs px-3 py-1 rounded-full animate-bounce whitespace-nowrap">
                                     KETUK UNTUK BUKA!
                                     <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-red-600 rotate-45"></div>
                                 </div>
                             </div>
                         )}
-
-                        {/* Phase 3: Opening (Ledakan & Confetti) */}
                         {boxPhase === 'opening' && (
                             <div className="relative flex items-center justify-center">
-                                {/* Kotak Meledak (Hilang membesar) */}
-                                <div className={`w-56 h-56 bg-white rounded-3xl flex items-center justify-center animate-pop-open`}>
-                                </div>
-                                {/* Partikel Confetti */}
+                                <div className={`w-56 h-56 bg-white rounded-3xl flex items-center justify-center animate-pop-open`}></div>
                                 <ConfettiExplosion />
                             </div>
                         )}
                     </div>
                   )}
 
-                  {/* CONTROLS (Only visible if idle) */}
                   {!isProcessing && boxPhase === 'idle' && (
                       <div className="mt-8 md:mt-12 flex flex-col items-center gap-4 md:gap-6">
-                        <button
-                          onClick={activeTab === 'cases' ? handleSpin : handleBuyBox}
-                          disabled={isProcessing}
-                          className={`
-                            group relative w-full md:w-auto px-8 md:px-20 py-5 md:py-6 rounded transform skew-x-[-10deg] transition-all duration-200 active:scale-95
-                            ${isProcessing 
-                              ? 'bg-gray-800 border-2 border-gray-700 cursor-not-allowed opacity-50' 
-                              : `bg-red-600 border-2 border-red-500 hover:bg-red-500 hover:scale-105 hover:shadow-[0_0_50px_rgba(220,38,38,0.6)]`}
-                          `}
-                        >
+                        <button onClick={activeTab === 'cases' ? handleSpin : handleBuyBox} disabled={isProcessing} className={`group relative w-full md:w-auto px-8 md:px-20 py-5 md:py-6 rounded transform skew-x-[-10deg] transition-all duration-200 active:scale-95 ${isProcessing ? 'bg-gray-800 border-2 border-gray-700 cursor-not-allowed opacity-50' : `bg-red-600 border-2 border-red-500 hover:bg-red-500 hover:scale-105 hover:shadow-[0_0_50px_rgba(220,38,38,0.6)]`}`}>
                           <div className="skew-x-[10deg] flex flex-col items-center">
-                            <span className={`text-xl md:text-3xl font-black uppercase tracking-[0.2em] ${isProcessing ? 'text-gray-500' : 'text-black'}`}>
-                              {activeTab === 'cases' ? 'OPEN CASE' : 'BUY BOX'}
-                            </span>
+                            <span className={`text-xl md:text-3xl font-black uppercase tracking-[0.2em] ${isProcessing ? 'text-gray-500' : 'text-black'}`}>{activeTab === 'cases' ? 'OPEN CASE' : 'BUY BOX'}</span>
                           </div>
                         </button>
-                        <div className="flex items-center gap-2 text-xs md:text-sm font-mono text-gray-500 bg-black/40 px-4 py-2 rounded border border-gray-800">
-                           PRICE: <span className={`font-bold ${currentCase.iconColor}`}>${currentCase.price.toLocaleString()}</span>
-                        </div>
+                        <div className="flex items-center gap-2 text-xs md:text-sm font-mono text-gray-500 bg-black/40 px-4 py-2 rounded border border-gray-800">PRICE: <span className={`font-bold ${currentCase.iconColor}`}>${currentCase.price.toLocaleString()}</span></div>
                       </div>
                   )}
                 </section>
 
-                {/* --- INVENTORY --- */}
                 <section className="bg-[#0a0a0a] border border-gray-900 rounded-xl p-4 md:p-6 min-h-[400px]">
                   <div className="flex flex-col items-start gap-4 border-b border-gray-800 pb-4 mb-4 md:mb-8 md:flex-row md:items-center md:justify-between">
                     <div className="flex items-center gap-3">
@@ -751,9 +709,7 @@
                       <span className="bg-gray-800 text-[10px] md:text-xs font-mono px-2 py-1 rounded text-gray-400 border border-gray-700">{inventory.length} AGENTS</span>
                     </div>
                     {inventory.some(i => i.rarity === 'common') && (
-                      <button onClick={handleSellAllCommon} className="w-full md:w-auto flex items-center justify-center gap-2 text-[10px] md:text-xs font-bold bg-gray-900 hover:bg-red-900/20 text-gray-400 hover:text-red-400 border border-gray-800 hover:border-red-900/50 px-4 py-3 md:py-2 rounded transition-all active:scale-95">
-                        <Trash2 size={14} /> JUAL SEMUA COMMON
-                      </button>
+                      <button onClick={handleSellAllCommon} className="w-full md:w-auto flex items-center justify-center gap-2 text-[10px] md:text-xs font-bold bg-gray-900 hover:bg-red-900/20 text-gray-400 hover:text-red-400 border border-gray-800 hover:border-red-900/50 px-4 py-3 md:py-2 rounded transition-all active:scale-95"><Trash2 size={14} /> JUAL SEMUA COMMON</button>
                     )}
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
@@ -771,7 +727,6 @@
                 </section>
               </main>
 
-              {/* --- MODALS (INFO, TOPUP, WINNER) --- */}
               {infoCase && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto" onClick={() => setInfoCase(null)}>
                   <div className="bg-[#111] border border-gray-800 w-full max-w-lg p-6 rounded-xl relative shadow-2xl my-auto" onClick={e => e.stopPropagation()}>
@@ -863,22 +818,30 @@
         // --- HELPER FUNCTIONS ---
         function getRarityColor(rarity) {
           switch(rarity) {
-            case 'common': return 'bg-gray-500'; case 'rare': return 'bg-blue-600'; case 'epic': return 'bg-purple-600'; case 'legendary': return 'bg-yellow-500'; default: return 'bg-gray-500';
+            case 'common': return 'bg-gray-500'; case 'rare': return 'bg-blue-600'; case 'epic': return 'bg-purple-600'; case 'legendary': return 'bg-yellow-500'; 
+            case 'void': return 'bg-red-900'; // Warna Void (Merah Gelap)
+            default: return 'bg-gray-500';
           }
         }
         function getRarityBorder(rarity) {
           switch(rarity) {
-            case 'common': return 'border-gray-600'; case 'rare': return 'border-blue-500'; case 'epic': return 'border-purple-500'; case 'legendary': return 'border-yellow-500'; default: return 'border-gray-600';
+            case 'common': return 'border-gray-600'; case 'rare': return 'border-blue-500'; case 'epic': return 'border-purple-500'; case 'legendary': return 'border-yellow-500'; 
+            case 'void': return 'border-red-900 shadow-[0_0_30px_rgba(220,38,38,0.8)]'; // Border Void (Glow Merah)
+            default: return 'border-gray-600';
           }
         }
         function getRarityText(rarity) {
           switch(rarity) {
-            case 'common': return 'text-gray-400'; case 'rare': return 'text-blue-400'; case 'epic': return 'text-purple-400'; case 'legendary': return 'text-yellow-400'; default: return 'text-gray-400';
+            case 'common': return 'text-gray-400'; case 'rare': return 'text-blue-400'; case 'epic': return 'text-purple-400'; case 'legendary': return 'text-yellow-400'; 
+            case 'void': return 'text-red-500'; // Teks Void Merah
+            default: return 'text-gray-400';
           }
         }
         function getRarityGradient(rarity) {
           switch(rarity) {
-            case 'common': return 'from-gray-300 to-gray-600'; case 'rare': return 'from-blue-300 to-blue-700'; case 'epic': return 'from-purple-300 to-purple-800'; case 'legendary': return 'from-yellow-200 to-yellow-600'; default: return 'from-gray-300 to-gray-600';
+            case 'common': return 'from-gray-300 to-gray-600'; case 'rare': return 'from-blue-300 to-blue-700'; case 'epic': return 'from-purple-300 to-purple-800'; case 'legendary': return 'from-yellow-200 to-yellow-600'; 
+            case 'void': return 'from-gray-900 to-red-900'; // Gradient Void Gelap
+            default: return 'from-gray-300 to-gray-600';
           }
         }
 
