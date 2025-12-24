@@ -292,8 +292,9 @@
             let rates = { common: 0, rare: 0, epic: 0, legendary: 0, void: 0 };
 
             // Khusus Plenger Case (Void & Legendary Only)
+            // 89% Legendary, 11% Void
             if (hasVoid && hasLegendary && !hasCommon && !hasRare) {
-                return { common: 0, rare: 0, epic: 0, legendary: 67, void: 33 };
+                return { common: 0, rare: 0, epic: 0, legendary: 89, void: 11 };
             }
             
             // Khusus Ramune Series (Void & Rare Only) - 90% Rare, 10% Void
@@ -316,13 +317,32 @@
             const pool = currentCase.pool;
             
             // Logic Khusus PLENGER BOX (Case God)
+            // 11% Void, 89% Legendary (Weighted by Price)
             if (currentCase.id === 'case_god') {
-                if (rand < 33) {
+                // 11% Chance for Void
+                if (rand < 11) {
                     const voidItems = pool.filter(a => a.rarity === 'void');
                     if (voidItems.length > 0) return { ...voidItems[Math.floor(Math.random() * voidItems.length)], instanceId: Date.now() + Math.random() };
                 }
+                
+                // 89% Chance for Legendary (Weighted)
                 const legendaryItems = pool.filter(a => a.rarity === 'legendary');
-                return { ...legendaryItems[Math.floor(Math.random() * legendaryItems.length)], instanceId: Date.now() + Math.random() };
+                
+                // Hitung total bobot (Inverse Price: Semakin murah, semakin besar bobotnya)
+                // Rumus: 1 / harga
+                const totalWeight = legendaryItems.reduce((acc, item) => acc + (1 / item.sellPrice), 0);
+                
+                let randomWeight = Math.random() * totalWeight;
+                
+                for (const item of legendaryItems) {
+                    const weight = 1 / item.sellPrice;
+                    if (randomWeight < weight) {
+                        return { ...item, instanceId: Date.now() + Math.random() };
+                    }
+                    randomWeight -= weight;
+                }
+                // Fallback jika loop tembus (jarang terjadi)
+                return { ...legendaryItems[0], instanceId: Date.now() + Math.random() };
             }
 
             // Logic Khusus RAMUNE SERIES (10% Void, 90% Rare)
