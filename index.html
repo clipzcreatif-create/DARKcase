@@ -73,6 +73,15 @@
         .animate-spin-slow {
             animation: spin 2s linear infinite;
         }
+        
+        /* Staggered Animation for Batch Reveal */
+        @keyframes slide-up-fade {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-up {
+            animation: slide-up-fade 0.5s ease-out forwards;
+        }
     </style>
 </head>
 <body>
@@ -107,6 +116,7 @@
         const Copy = (props) => <IconBase {...props}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></IconBase>;
         const CheckCircle = (props) => <IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconBase>;
         const Loader = (props) => <IconBase {...props}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></IconBase>;
+        const Layers = (props) => <IconBase {...props}><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></IconBase>;
 
         // --- DATA & KONFIGURASI ---
         const INITIAL_BALANCE = 10000000; // Rp 10.000.000
@@ -188,8 +198,6 @@
               { id: 'rm3', name: "Hata Melon", rarity: "rare", tier: 4, sellPrice: 35000, img: "https://lh3.googleusercontent.com/d/1dG56T0hHh1bAS_rlXJEVEgaAUCBa-GA_=w1000?authuser=0" },
               { id: 'rm4', name: "Hata Original", rarity: "rare", tier: 4, sellPrice: 35000, img: "https://lh3.googleusercontent.com/d/1fzlv3fypSw1_0lqpVg4cLx-Zb8GoAyyx=w1000?authuser=0" },
               { id: 'rm5', name: "Hata Strawberry", rarity: "rare", tier: 5, sellPrice: 35000, img: "https://lh3.googleusercontent.com/d/1UHyxCpM0EpPBfdmv1S5fv22CnN7AhTIK=w1000?authuser=0" },
-              
-              // VOID RANK (10%) - Harga Jual Rp 200.000
               { id: 'rm6', name: "Hata Cola (VOID)", rarity: "void", tier: 10, sellPrice: 200000, img: "https://lh3.googleusercontent.com/d/1Zu8U_1szN71tG2hKuDH08M-Gv1coYQJ6=w1000?authuser=0" },
             ]
           },
@@ -203,20 +211,13 @@
             icon: <BoxIcon size={40} className="text-yellow-500" strokeWidth={1.5} />,
             desc: 'Ultimate fortune inside.',
             pool: [
-              // COMMON (50%)
               { id: 'gd_nopal_origin', name: "King Nopal Origin", rarity: "common", tier: 1, sellPrice: 200000, img: "https://lh3.googleusercontent.com/d/1l-ZgQH6ZHqstJlQrTj070D5fxv-LHQcv=w1000?authuser=0" },
-              
-              // RARE (40%)
               { id: 'gd_nopal_horror', name: "King Nopal Horror", rarity: "rare", tier: 2, sellPrice: 500000, img: "https://lh3.googleusercontent.com/d/1fveKgGIT7JKQSyvwNGTftYOzO5QMPkyT=w1000?authuser=0" },
-
-              // LEGENDARY (Weighted)
               { id: 'gd1', name: "Plenger Gank", rarity: "legendary", tier: 8, sellPrice: 15000000, img: "https://lh3.googleusercontent.com/d/1uw5yq1fu1ssZ7BHj0EE3m8z-M0lF3OKc=w1000?authuser=0" },
               { id: 'gd2', name: "AlvanTron", rarity: "legendary", tier: 8, sellPrice: 25000000, img: "https://lh3.googleusercontent.com/d/1LQ8M27aj-XyfO2JVDYTp9PvgwIObNifr=w1000?authuser=0" },
               { id: 'gd3', name: "Danish Ferrari", rarity: "legendary", tier: 8, sellPrice: 45000000, img: "https://lh3.googleusercontent.com/d/1jOhjQlY2Rn-KNxNf7sCCS0XMCWN8gzkV=w1000?authuser=0" },
               { id: 'gd4', name: "Rey Mafia", rarity: "legendary", tier: 8, sellPrice: 55000000, img: "https://lh3.googleusercontent.com/d/1sOoiLG-Wk5JTlKPiGqT4KbcZlw2Z350F=w1000?authuser=0" },
               { id: 'gd5', name: "Alvan Satpam", rarity: "legendary", tier: 8, sellPrice: 10000000, img: "https://lh3.googleusercontent.com/d/1bUKbdYYsM8ZkfS5cioCc8YDF7HLWkLbu=w1000?authuser=0" },
-              
-              // VOID RANK ITEM
               { id: 'gd6', name: "Ken Alone", rarity: "void", tier: 10, sellPrice: 100000000, img: "https://lh3.googleusercontent.com/d/1hDolHpMu6auI5OrNaCwGRF3xh5zezpCZ=w1000?authuser=0" },
             ]
           }
@@ -326,28 +327,25 @@
         // --- APP COMPONENT ---
         function App() {
           const [activeTab, setActiveTab] = useState('cases'); 
-          
           const [balance, setBalance] = useState(() => {
               const saved = localStorage.getItem('darkcase_balance');
               return saved ? parseInt(saved, 10) : INITIAL_BALANCE;
           });
-
           const [inventory, setInventory] = useState(() => {
               const saved = localStorage.getItem('darkcase_inventory');
               return saved ? JSON.parse(saved) : [];
           });
-          
           const [currentCase, setCurrentCase] = useState(CASES[0]);
           const [isProcessing, setIsProcessing] = useState(false);
           const [winner, setWinner] = useState(null);
+          const [batchWinners, setBatchWinners] = useState(null); // NEW: For 5x results
           const [showTopUp, setShowTopUp] = useState(false);
           const [showReward, setShowReward] = useState(false);
           
-          // State Khusus Top Up Flow
-          const [topUpStep, setTopUpStep] = useState(0); // 0: Select Amount, 1: Payment Method
+          const [topUpStep, setTopUpStep] = useState(0); 
           const [selectedTopUpAmount, setSelectedTopUpAmount] = useState(0);
-          const [paymentMethod, setPaymentMethod] = useState('qris'); // 'qris' or 'blu'
-          const [topUpStatus, setTopUpStatus] = useState('idle'); // idle, processing, success
+          const [paymentMethod, setPaymentMethod] = useState('qris'); 
+          const [topUpStatus, setTopUpStatus] = useState('idle'); 
 
           const [spinItems, setSpinItems] = useState([]);
           const [containerWidth, setContainerWidth] = useState(0);
@@ -363,15 +361,8 @@
           const audioCtxRef = useRef(null);
           const soundTimeoutRef = useRef(null);
 
-          // --- SAVE TO LOCALSTORAGE ---
-          useEffect(() => {
-              localStorage.setItem('darkcase_balance', balance.toString());
-          }, [balance]);
-
-          useEffect(() => {
-              localStorage.setItem('darkcase_inventory', JSON.stringify(inventory));
-          }, [inventory]);
-
+          useEffect(() => { localStorage.setItem('darkcase_balance', balance.toString()); }, [balance]);
+          useEffect(() => { localStorage.setItem('darkcase_inventory', JSON.stringify(inventory)); }, [inventory]);
           useEffect(() => {
             const pool = currentCase.pool;
             const initialItems = Array(15).fill(null).map(() => pool[Math.floor(Math.random() * pool.length)]);
@@ -381,11 +372,8 @@
                 railRef.current.style.transform = 'translateX(0px)';
             }
           }, [currentCase]);
-
           useEffect(() => {
-            const updateWidth = () => {
-                if(containerRef.current) setContainerWidth(containerRef.current.offsetWidth);
-            };
+            const updateWidth = () => { if(containerRef.current) setContainerWidth(containerRef.current.offsetWidth); };
             setTimeout(updateWidth, 100);
             window.addEventListener('resize', updateWidth);
             return () => {
@@ -405,63 +393,35 @@
 
             let rates = { common: 0, rare: 0, epic: 0, legendary: 0, void: 0 };
 
-            // Khusus Plenger Case
-            if (currentCase.id === 'case_god') {
-                return { common: 50, rare: 40, epic: 0, legendary: 8, void: 2 };
-            }
-            
-            if (hasVoid && hasRare && !hasLegendary && !hasCommon && !hasEpic) {
-                return { common: 0, rare: 90, epic: 0, legendary: 0, void: 10 };
-            }
-
+            if (currentCase.id === 'case_god') { return { common: 50, rare: 40, epic: 0, legendary: 8, void: 2 }; }
+            if (hasVoid && hasRare && !hasLegendary && !hasCommon && !hasEpic) { return { common: 0, rare: 90, epic: 0, legendary: 0, void: 10 }; }
             if (hasCommon) rates.common += 50; else if (hasRare) rates.rare += 50; else if (hasEpic) rates.epic += 50; else rates.legendary += 50;
             if (hasRare) rates.rare += 35; else if (hasEpic) rates.epic += 35; else if (hasLegendary) rates.legendary += 35; else rates.common += 35;
             if (hasEpic) rates.epic += 12; else if (hasLegendary) rates.legendary += 12; else rates.rare += 12;
             if (hasLegendary) rates.legendary += 3; else rates.epic += 3;
-            
             return rates;
           };
 
           const getRandomAgent = () => {
             const rand = Math.random() * 100;
             const pool = currentCase.pool;
-            
-            // Logic Khusus PLENGER BOX (Case God)
             if (currentCase.id === 'case_god') {
-                // 50% Common (King Nopal Origin)
-                if (rand < 50) {
-                    const commonItems = pool.filter(a => a.rarity === 'common');
-                    return { ...commonItems[0], instanceId: Date.now() + Math.random() };
-                }
-                
-                // 40% Rare (King Nopal Horror) -> 50 + 40 = 90
-                if (rand < 90) {
-                    const rareItems = pool.filter(a => a.rarity === 'rare');
-                    return { ...rareItems[0], instanceId: Date.now() + Math.random() };
-                }
-
-                // 2% Void (>= 98)
+                if (rand < 50) return { ...pool.find(a => a.rarity === 'common'), instanceId: Date.now() + Math.random() };
+                if (rand < 90) return { ...pool.find(a => a.rarity === 'rare'), instanceId: Date.now() + Math.random() };
                 if (rand >= 98) {
                     const voidItems = pool.filter(a => a.rarity === 'void');
                     if (voidItems.length > 0) return { ...voidItems[Math.floor(Math.random() * voidItems.length)], instanceId: Date.now() + Math.random() };
                 }
-                
-                // Sisa 8% (90 <= rand < 98) = Legendary
                 const legendaryItems = pool.filter(a => a.rarity === 'legendary');
-                // Weighted by Inverse Price
                 const totalWeight = legendaryItems.reduce((acc, item) => acc + (1 / item.sellPrice), 0);
                 let randomWeight = Math.random() * totalWeight;
                 for (const item of legendaryItems) {
                     const weight = 1 / item.sellPrice;
-                    if (randomWeight < weight) {
-                        return { ...item, instanceId: Date.now() + Math.random() };
-                    }
+                    if (randomWeight < weight) return { ...item, instanceId: Date.now() + Math.random() };
                     randomWeight -= weight;
                 }
-                // Fallback
                 return { ...legendaryItems[0], instanceId: Date.now() + Math.random() };
             }
-
             if (currentCase.id === 'case_ramune') {
                 if (rand < 10) { 
                     const voidItems = pool.filter(a => a.rarity === 'void');
@@ -470,22 +430,17 @@
                 const rareItems = pool.filter(a => a.rarity === 'rare');
                 return { ...rareItems[Math.floor(Math.random() * rareItems.length)], instanceId: Date.now() + Math.random() };
             }
-            
             const common = pool.filter(a => a.rarity === 'common');
             const rare = pool.filter(a => a.rarity === 'rare');
             const epic = pool.filter(a => a.rarity === 'epic');
             const legendary = pool.filter(a => a.rarity === 'legendary');
-
             let selectedPool = [];
-
             if (rand < 50 && common.length > 0) selectedPool = common;
             else if (rand < 85 && rare.length > 0) selectedPool = rare;
             else if (rand < 97 && epic.length > 0) selectedPool = epic;
             else if (legendary.length > 0) selectedPool = legendary;
             else selectedPool = pool; 
-
             if (selectedPool.length === 0) selectedPool = pool;
-
             const baseAgent = selectedPool[Math.floor(Math.random() * selectedPool.length)];
             return { ...baseAgent, instanceId: Date.now() + Math.random() };
           };
@@ -495,18 +450,15 @@
             const nextIndex = (currentIndex + 1) % CASES.length;
             setCurrentCase(CASES[nextIndex]);
           };
-
           const handlePrevCase = () => {
             const currentIndex = CASES.findIndex(c => c.id === currentCase.id);
             const prevIndex = (currentIndex - 1 + CASES.length) % CASES.length;
             setCurrentCase(CASES[prevIndex]);
           };
-
           const initAudio = () => {
             if (!audioCtxRef.current) { audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)(); }
             if (audioCtxRef.current.state === 'suspended') { audioCtxRef.current.resume(); }
           };
-
           const playClickSound = () => {
             if (!soundEnabled || !audioCtxRef.current) return;
             try {
@@ -524,7 +476,6 @@
                 osc.stop(ctx.currentTime + 0.06);
             } catch (e) { }
           };
-
           const playShakingSound = () => {
              if (!soundEnabled || !audioCtxRef.current) return;
              const ctx = audioCtxRef.current;
@@ -540,7 +491,6 @@
              osc.start();
              osc.stop(ctx.currentTime + 0.5);
           };
-
           const playPopSound = () => {
              if (!soundEnabled || !audioCtxRef.current) return;
              const ctx = audioCtxRef.current;
@@ -556,6 +506,30 @@
              osc.start();
              osc.stop(ctx.currentTime + 0.2);
           };
+          
+          // --- NEW FUNCTION: Play Legendary Notification Sound ---
+          const playLegendaryHitSound = () => {
+             if (!soundEnabled || !audioCtxRef.current) return;
+             const ctx = audioCtxRef.current;
+             
+             // Create high pitched metallic "Cekring" sound
+             const osc = ctx.createOscillator();
+             const gain = ctx.createGain();
+             
+             // High frequency sine wave with rapid decay
+             osc.type = 'sine';
+             osc.frequency.setValueAtTime(2000, ctx.currentTime); // High pitch start
+             osc.frequency.exponentialRampToValueAtTime(500, ctx.currentTime + 0.4); // Decay pitch
+             
+             gain.gain.setValueAtTime(0.5, ctx.currentTime);
+             gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4); // Volume decay
+             
+             osc.connect(gain);
+             gain.connect(ctx.destination);
+             
+             osc.start();
+             osc.stop(ctx.currentTime + 0.4);
+          };
 
           const speakCongratulation = (text) => {
             if (!soundEnabled || !('speechSynthesis' in window)) return;
@@ -570,7 +544,6 @@
             utterance.volume = 1.0;
             window.speechSynthesis.speak(utterance);
           };
-
           const playWinSound = (rarity) => {
             if (!soundEnabled || !audioCtxRef.current) return;
             const ctx = audioCtxRef.current;
@@ -606,7 +579,6 @@
                 osc.stop(now + 0.3);
             }
           };
-
           const playSoundLoop = (startTime, duration) => {
             const now = Date.now();
             const elapsed = now - startTime;
@@ -619,85 +591,157 @@
             }, currentDelay);
           };
 
-          const handleSpin = () => {
-            if (isProcessing) return;
-            if (balance < currentCase.price) { setShowTopUp(true); return; }
+          // --- SPIN & BOX LOGIC FOR MULTI-PULL (5x) ---
+          const performGacha = async (count = 1) => {
+             if (isProcessing) return;
+             const totalPrice = currentCase.price * count;
+             if (balance < totalPrice) { setShowTopUp(true); return; }
 
-            initAudio();
-            setBalance(prev => prev - currentCase.price);
-            setIsProcessing(true);
-            setWinner(null);
-            setShowReward(false);
+             initAudio();
+             setBalance(prev => prev - totalPrice);
+             setIsProcessing(true);
+             setWinner(null);
+             setBatchWinners(null);
+             setShowReward(false);
 
-            const winningAgent = getRandomAgent();
-            const pool = currentCase.pool;
-            const landingIndex = 75; 
-            const totalItems = 100; 
-            const newSpinItems = [];
-            for (let i = 0; i < totalItems; i++) {
-              if (i === landingIndex) newSpinItems.push(winningAgent); 
-              else newSpinItems.push(pool[Math.floor(Math.random() * pool.length)]);
-            }
-            setSpinItems(newSpinItems);
+             // 1. GENERATE REWARDS
+             const results = [];
+             for(let i=0; i<count; i++) {
+                 results.push(getRandomAgent());
+             }
 
-            if (railRef.current) {
-              railRef.current.style.transition = 'none';
-              railRef.current.style.transform = 'translateX(0px)';
-            }
+             // 2. ANIMATION HANDLING
+             if (count === 1) {
+                 // Single Logic (Existing)
+                 const winningAgent = results[0];
+                 
+                 if (activeTab === 'cases') {
+                     // Reel Animation
+                     const pool = currentCase.pool;
+                     const landingIndex = 75; 
+                     const totalItems = 100; 
+                     const newSpinItems = [];
+                     for (let i = 0; i < totalItems; i++) {
+                        if (i === landingIndex) newSpinItems.push(winningAgent); 
+                        else newSpinItems.push(pool[Math.floor(Math.random() * pool.length)]);
+                     }
+                     setSpinItems(newSpinItems);
+                     if (railRef.current) { railRef.current.style.transition = 'none'; railRef.current.style.transform = 'translateX(0px)'; }
+                     
+                     requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            if (railRef.current && containerWidth > 0) {
+                                const winningCardCenter = (landingIndex * TOTAL_ITEM_WIDTH) + (CARD_WIDTH / 2) + CARD_MARGIN_X;
+                                const centerOfViewport = containerWidth / 2;
+                                const targetTranslateX = winningCardCenter - centerOfViewport + (Math.random() * CARD_WIDTH * 0.7 - CARD_WIDTH * 0.35);
+                                railRef.current.style.transition = `transform 6000ms cubic-bezier(0.15, 0.90, 0.30, 1.0)`; 
+                                railRef.current.style.transform = `translateX(-${targetTranslateX}px)`;
+                                if (soundEnabled) { if (soundTimeoutRef.current) clearTimeout(soundTimeoutRef.current); playSoundLoop(Date.now(), 5500); }
+                            }
+                        });
+                     });
 
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
-                if (railRef.current && containerWidth > 0) {
-                  const winningCardCenter = (landingIndex * TOTAL_ITEM_WIDTH) + (CARD_WIDTH / 2) + CARD_MARGIN_X;
-                  const centerOfViewport = containerWidth / 2;
-                  let targetTranslateX = winningCardCenter - centerOfViewport;
-                  const maxJitter = CARD_WIDTH * 0.35; 
-                  const jitter = (Math.random() * maxJitter * 2) - maxJitter;
-                  targetTranslateX += jitter;
-                  const duration = 6000; 
-                  railRef.current.style.transition = `transform ${duration}ms cubic-bezier(0.15, 0.90, 0.30, 1.0)`; 
-                  railRef.current.style.transform = `translateX(-${targetTranslateX}px)`;
-                  if (soundEnabled) {
-                      if (soundTimeoutRef.current) clearTimeout(soundTimeoutRef.current);
-                      playSoundLoop(Date.now(), duration - 500); 
-                  }
-                }
-              });
-            });
+                     setTimeout(() => {
+                        setIsProcessing(false);
+                        setWinner(winningAgent);
+                        setInventory(prev => [winningAgent, ...prev]);
+                        setShowReward(true);
+                        playWinSound(winningAgent.rarity);
+                     }, 6500);
+                 } else {
+                     // Box Animation (Single)
+                     setPendingWinner(winningAgent);
+                     setBoxPhase('purchased');
+                     playShakingSound();
+                     // Wait for user to click
+                 }
+             } else {
+                 // MULTI-PULL LOGIC (5x - SEQUENTIAL)
+                 if (activeTab === 'cases') {
+                     // CASE MODE: Spin -> Stop -> Spin -> Stop...
+                     for (let i = 0; i < count; i++) {
+                        const targetAgent = results[i];
+                        const pool = currentCase.pool;
+                        const landingIndex = 35; // Shorter
+                        const totalItems = 50;
+                        const newSpinItems = [];
+                        for (let k = 0; k < totalItems; k++) {
+                           if (k === landingIndex) newSpinItems.push(targetAgent);
+                           else newSpinItems.push(pool[Math.floor(Math.random() * pool.length)]);
+                        }
+                        
+                        setSpinItems(newSpinItems);
+                        if (railRef.current) {
+                            railRef.current.style.transition = 'none';
+                            railRef.current.style.transform = 'translateX(0px)';
+                        }
+                        
+                        await new Promise(r => setTimeout(r, 50)); // DOM Update wait
+                        
+                        if (railRef.current && containerWidth > 0) {
+                             const winningCardCenter = (landingIndex * TOTAL_ITEM_WIDTH) + (CARD_WIDTH / 2) + CARD_MARGIN_X;
+                             const centerOfViewport = containerWidth / 2;
+                             const targetTranslateX = winningCardCenter - centerOfViewport;
+                             
+                             const duration = 1200; // Cepat (1.2s)
+                             railRef.current.style.transition = `transform ${duration}ms cubic-bezier(0.2, 0.8, 0.2, 1.0)`;
+                             railRef.current.style.transform = `translateX(-${targetTranslateX}px)`;
+                             
+                             if (soundEnabled) {
+                                 let start = Date.now();
+                                 const loop = () => {
+                                     if(Date.now() - start > duration) return;
+                                     playClickSound();
+                                     setTimeout(loop, 150);
+                                 }
+                                 loop();
+                             }
+                             await new Promise(r => setTimeout(r, duration + 300)); // Wait finish + gap
 
-            setTimeout(() => {
-              setIsProcessing(false);
-              setWinner(winningAgent);
-              setInventory(prev => [winningAgent, ...prev]);
-              setShowReward(true);
-              playWinSound(winningAgent.rarity);
-            }, 6500); 
-          };
+                             // PLAY CEKRING SOUND IF LEGENDARY/VOID HIT
+                             if (targetAgent.rarity === 'legendary' || targetAgent.rarity === 'void') {
+                                 playLegendaryHitSound();
+                             }
+                        }
+                     }
+                 } else {
+                     // BOX MODE: Shake -> Pop -> ...
+                     for (let i = 0; i < count; i++) {
+                         setBoxPhase('shaking');
+                         playShakingSound();
+                         await new Promise(r => setTimeout(r, 600)); 
+                         
+                         setBoxPhase('opening');
+                         playPopSound();
+                         
+                         // PLAY CEKRING SOUND IF LEGENDARY/VOID HIT
+                         const targetAgent = results[i];
+                         if (targetAgent.rarity === 'legendary' || targetAgent.rarity === 'void') {
+                              playLegendaryHitSound();
+                         }
 
-          const handleBuyBox = () => {
-            if (isProcessing) return;
-            if (balance < currentCase.price) { setShowTopUp(true); return; }
+                         await new Promise(r => setTimeout(r, 400)); 
+                         
+                         setBoxPhase('idle');
+                         await new Promise(r => setTimeout(r, 100));
+                     }
+                 }
 
-            initAudio();
-            setBalance(prev => prev - currentCase.price);
-            setIsProcessing(true);
-            setWinner(null);
-            setShowReward(false);
-            
-            const winningAgent = getRandomAgent();
-            setPendingWinner(winningAgent);
-            
-            setBoxPhase('purchased');
-            playShakingSound();
+                 // SHOW RESULTS
+                 setIsProcessing(false);
+                 setBatchWinners(results);
+                 setInventory(prev => [...results, ...prev]);
+                 setShowReward(true);
+                 const bestItem = results.reduce((prev, current) => (prev.sellPrice > current.sellPrice) ? prev : current);
+                 playWinSound(bestItem.rarity);
+             }
           };
 
           const handleOpenBox = () => {
             if (boxPhase !== 'purchased') return;
-
             setBoxPhase('opening'); 
             playPopSound(); 
             playWinSound(pendingWinner.rarity); 
-            
             setTimeout(() => {
                 setWinner(pendingWinner);
                 setInventory(prev => [pendingWinner, ...prev]);
@@ -711,6 +755,23 @@
           const handleSell = (item) => {
             setBalance(prev => prev + item.sellPrice);
             setInventory(prev => prev.filter(i => i.instanceId !== item.instanceId));
+            // Jika single winner, tutup modal
+            if (winner && winner.instanceId === item.instanceId) setShowReward(false);
+          };
+
+          const handleSellBatchItem = (item) => {
+             setBalance(prev => prev + item.sellPrice);
+             setInventory(prev => prev.filter(i => i.instanceId !== item.instanceId));
+             setBatchWinners(prev => prev.filter(i => i.instanceId !== item.instanceId));
+             if (batchWinners.length <= 1) setShowReward(false);
+          };
+
+          const handleSellAllBatch = () => {
+              const totalValue = batchWinners.reduce((acc, item) => acc + item.sellPrice, 0);
+              setBalance(prev => prev + totalValue);
+              setInventory(prev => prev.filter(i => !batchWinners.some(bw => bw.instanceId === i.instanceId)));
+              setShowReward(false);
+              setBatchWinners(null);
           };
 
           const handleSellAllCommon = () => {
@@ -726,25 +787,18 @@
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
           };
 
-          // --- TOP UP LOGIC WITH ANIMATION ---
           const handleTopUpConfirm = () => {
               if(selectedTopUpAmount > 0) {
-                  // Phase 1: Processing
                   setTopUpStatus('processing');
-                  
-                  // Simulate Delay (2s)
                   setTimeout(() => {
-                      // Phase 2: Success
                       setTopUpStatus('success');
-                      
-                      // Phase 3: Finish & Close (1.5s delay)
                       setTimeout(() => {
                           setBalance(prev => prev + selectedTopUpAmount);
                           setShowTopUp(false);
                           setTopUpStep(0);
                           setSelectedTopUpAmount(0);
                           setPaymentMethod('qris');
-                          setTopUpStatus('idle'); // Reset Status
+                          setTopUpStatus('idle');
                       }, 1500);
                   }, 2000);
               }
@@ -834,22 +888,24 @@
                   ) : (
                     <div className="flex flex-col items-center justify-center w-full h-[300px] relative">
                         {boxPhase === 'idle' && (
-                            <div className={`transform transition-all duration-300 hover:scale-105 cursor-pointer opacity-70 hover:opacity-100`} onClick={handleBuyBox}>
+                            <div className={`transform transition-all duration-300 hover:scale-105 cursor-pointer opacity-70 hover:opacity-100`} onClick={() => performGacha(1)}>
                                 <div className={`w-40 h-40 ${currentCase.bg} rounded-3xl border-4 ${currentCase.color} border-dashed flex items-center justify-center`}>
                                     <Package size={60} className={currentCase.iconColor} strokeWidth={1} />
                                 </div>
                                 <div className="text-center mt-4 text-gray-500 text-xs tracking-widest font-mono">PURCHASE TO REVEAL</div>
                             </div>
                         )}
-                        {boxPhase === 'purchased' && (
-                            <div className="animate-shake relative group" onClick={handleOpenBox} title="Klik untuk membuka!">
+                        {(boxPhase === 'purchased' || boxPhase === 'shaking') && (
+                            <div className="animate-shake relative group" onClick={boxPhase === 'purchased' ? handleOpenBox : null} title="Klik untuk membuka!">
                                 <div className={`w-56 h-56 bg-zinc-900 rounded-3xl border-4 ${currentCase.color} flex items-center justify-center shadow-[0_0_80px_rgba(255,255,255,0.15)]`}>
                                     <Package size={100} className="text-white drop-shadow-lg" strokeWidth={1.5} />
                                 </div>
-                                <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-red-600 text-white font-black text-xs px-3 py-1 rounded-full animate-bounce whitespace-nowrap">
-                                    KETUK UNTUK BUKA!
-                                    <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-red-600 rotate-45"></div>
-                                </div>
+                                {boxPhase === 'purchased' && (
+                                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-red-600 text-white font-black text-xs px-3 py-1 rounded-full animate-bounce whitespace-nowrap">
+                                        KETUK UNTUK BUKA!
+                                        <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-red-600 rotate-45"></div>
+                                    </div>
+                                )}
                             </div>
                         )}
                         {boxPhase === 'opening' && (
@@ -862,13 +918,21 @@
                   )}
 
                   {!isProcessing && boxPhase === 'idle' && (
-                      <div className="mt-8 md:mt-12 flex flex-col items-center gap-4 md:gap-6">
-                        <button onClick={activeTab === 'cases' ? handleSpin : handleBuyBox} disabled={isProcessing} className={`group relative w-full md:w-auto px-8 md:px-20 py-5 md:py-6 rounded transform skew-x-[-10deg] transition-all duration-200 active:scale-95 ${isProcessing ? 'bg-gray-800 border-2 border-gray-700 cursor-not-allowed opacity-50' : `bg-red-600 border-2 border-red-500 hover:bg-red-500 hover:scale-105 hover:shadow-[0_0_50px_rgba(220,38,38,0.6)]`}`}>
-                          <div className="skew-x-[10deg] flex flex-col items-center">
-                            <span className={`text-xl md:text-3xl font-black uppercase tracking-[0.2em] ${isProcessing ? 'text-gray-500' : 'text-black'}`}>{activeTab === 'cases' ? 'OPEN CASE' : 'BUY BOX'}</span>
-                          </div>
-                        </button>
-                        <div className="flex items-center gap-2 text-xs md:text-sm font-mono text-gray-500 bg-black/40 px-4 py-2 rounded border border-gray-800">PRICE: <span className={`font-bold ${currentCase.iconColor}`}>{formatRupiah(currentCase.price)}</span></div>
+                      <div className="mt-8 md:mt-12 flex flex-col items-center gap-4">
+                        <div className="flex gap-4">
+                            <button onClick={() => performGacha(1)} disabled={isProcessing} className={`group relative w-32 md:w-40 px-4 py-4 rounded transform skew-x-[-10deg] transition-all duration-200 active:scale-95 ${isProcessing ? 'bg-gray-800 cursor-not-allowed opacity-50' : `bg-gray-800 border-2 border-gray-600 hover:border-white text-white hover:scale-105`}`}>
+                              <div className="skew-x-[10deg] flex flex-col items-center">
+                                <span className="text-sm font-bold text-gray-400 mb-1">1x OPEN</span>
+                                <span className={`text-sm font-mono font-bold ${currentCase.iconColor}`}>{formatRupiah(currentCase.price)}</span>
+                              </div>
+                            </button>
+                            <button onClick={() => performGacha(5)} disabled={isProcessing} className={`group relative w-32 md:w-40 px-4 py-4 rounded transform skew-x-[-10deg] transition-all duration-200 active:scale-95 ${isProcessing ? 'bg-gray-800 cursor-not-allowed opacity-50' : `bg-red-600 border-2 border-red-500 hover:bg-red-500 text-black hover:scale-105 shadow-[0_0_30px_rgba(220,38,38,0.4)]`}`}>
+                              <div className="skew-x-[10deg] flex flex-col items-center">
+                                <span className="text-lg font-black tracking-widest mb-1">5x OPEN</span>
+                                <span className="text-xs font-mono font-bold opacity-80">{formatRupiah(currentCase.price * 5)}</span>
+                              </div>
+                            </button>
+                        </div>
                       </div>
                   )}
                 </section>
@@ -931,7 +995,6 @@
                 </div>
               )}
 
-              {/* MODAL TOP UP BARU (DENGAN ANIMASI) */}
               {showTopUp && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto">
                   <div className="bg-[#111] border border-gray-800 w-full max-w-lg p-6 md:p-8 relative shadow-2xl my-auto min-h-[400px] flex flex-col">
@@ -1023,6 +1086,7 @@
                 </div>
               )}
 
+              {/* SINGLE WINNER MODAL */}
               {showReward && winner && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 overflow-y-auto" onClick={() => setShowReward(false)}>
                   <div className="flex flex-col items-center justify-center animate-in zoom-in-95 fade-in duration-300 max-w-2xl w-full my-auto py-8" onClick={e => e.stopPropagation()}>
@@ -1053,6 +1117,55 @@
                     </div>
                     <button onClick={() => setShowReward(false)} className="mt-6 text-gray-600 hover:text-white text-xs md:text-sm underline decoration-gray-700 underline-offset-4 p-2">Simpan ke Inventory</button>
                   </div>
+                </div>
+              )}
+
+              {/* BATCH REWARD MODAL (5x PULL) */}
+              {showReward && batchWinners && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 overflow-y-auto" onClick={() => setShowReward(false)}>
+                   <div className="flex flex-col items-center justify-center w-full max-w-4xl my-auto py-8" onClick={e => e.stopPropagation()}>
+                       <h2 className="text-3xl md:text-5xl font-black italic tracking-tighter text-white mb-8 drop-shadow-lg text-center">5x OPENING RESULTS</h2>
+                       
+                       {/* Grid 5 Item */}
+                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-8 w-full">
+                           {batchWinners.map((item, idx) => (
+                               <div key={item.instanceId} className={`relative group animate-slide-up bg-zinc-900 rounded-lg overflow-hidden border-2 shadow-xl ${getRarityBorder(item.rarity)}`} style={{ animationDelay: `${idx * 100}ms` }}>
+                                   <div className={`absolute top-2 right-2 z-10 bg-black/60 px-2 rounded text-[10px] uppercase font-bold ${getRarityText(item.rarity)}`}>{item.rarity}</div>
+                                   <div className="h-32 overflow-hidden">
+                                       <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
+                                   </div>
+                                   <div className="p-2 text-center bg-black/80">
+                                       <p className={`text-xs font-bold truncate ${getRarityText(item.rarity)}`}>{item.name}</p>
+                                       <p className="text-green-400 font-mono text-[10px] mt-1">+{formatRupiah(item.sellPrice)}</p>
+                                       <button 
+                                            onClick={(e) => { e.stopPropagation(); handleSellBatchItem(item); }}
+                                            className="mt-2 w-full bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold py-1 rounded"
+                                       >
+                                           JUAL
+                                       </button>
+                                   </div>
+                               </div>
+                           ))}
+                       </div>
+
+                       {/* Summary & Actions */}
+                       <div className="flex flex-col items-center gap-4">
+                           <div className="text-gray-400 text-sm">TOTAL VALUE: <span className="text-green-400 font-bold font-mono text-xl">{formatRupiah(batchWinners.reduce((acc, i) => acc + i.sellPrice, 0))}</span></div>
+                           <div className="flex gap-4">
+                               <button onClick={handleSellAllBatch} className="bg-zinc-800 hover:bg-zinc-700 text-white border border-gray-600 px-6 py-3 rounded font-bold transition-all">JUAL SEMUA</button>
+                               <button onClick={() => { setShowReward(false); setBatchWinners(null); }} className="bg-white hover:bg-gray-200 text-black px-8 py-3 rounded font-bold transition-all">SIMPAN SEMUA</button>
+                               <button onClick={() => { 
+                                   setShowReward(false); 
+                                   setBatchWinners(null); 
+                                   // Re-trigger 5x
+                                   if(activeTab === 'cases') performGacha(5); 
+                                   else performGacha(5); // Box 5x logic same as case currently
+                               }} className="bg-red-600 hover:bg-red-500 text-black px-8 py-3 rounded font-bold shadow-lg transition-all">
+                                   5x LAGI (-{formatRupiah(currentCase.price * 5)})
+                               </button>
+                           </div>
+                       </div>
+                   </div>
                 </div>
               )}
             </div>
