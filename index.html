@@ -188,6 +188,8 @@
               { id: 'rm3', name: "Hata Melon", rarity: "rare", tier: 4, sellPrice: 35000, img: "https://lh3.googleusercontent.com/d/1dG56T0hHh1bAS_rlXJEVEgaAUCBa-GA_=w1000?authuser=0" },
               { id: 'rm4', name: "Hata Original", rarity: "rare", tier: 4, sellPrice: 35000, img: "https://lh3.googleusercontent.com/d/1fzlv3fypSw1_0lqpVg4cLx-Zb8GoAyyx=w1000?authuser=0" },
               { id: 'rm5', name: "Hata Strawberry", rarity: "rare", tier: 5, sellPrice: 35000, img: "https://lh3.googleusercontent.com/d/1UHyxCpM0EpPBfdmv1S5fv22CnN7AhTIK=w1000?authuser=0" },
+              
+              // VOID RANK (10%) - Harga Jual Rp 200.000
               { id: 'rm6', name: "Hata Cola (VOID)", rarity: "void", tier: 10, sellPrice: 200000, img: "https://lh3.googleusercontent.com/d/1Zu8U_1szN71tG2hKuDH08M-Gv1coYQJ6=w1000?authuser=0" },
             ]
           },
@@ -201,11 +203,20 @@
             icon: <BoxIcon size={40} className="text-yellow-500" strokeWidth={1.5} />,
             desc: 'Ultimate fortune inside.',
             pool: [
+              // COMMON (50%)
+              { id: 'gd_nopal_origin', name: "King Nopal Origin", rarity: "common", tier: 1, sellPrice: 200000, img: "https://lh3.googleusercontent.com/d/1l-ZgQH6ZHqstJlQrTj070D5fxv-LHQcv=w1000?authuser=0" },
+              
+              // RARE (40%)
+              { id: 'gd_nopal_horror', name: "King Nopal Horror", rarity: "rare", tier: 2, sellPrice: 500000, img: "https://lh3.googleusercontent.com/d/1fveKgGIT7JKQSyvwNGTftYOzO5QMPkyT=w1000?authuser=0" },
+
+              // LEGENDARY (Weighted)
               { id: 'gd1', name: "Plenger Gank", rarity: "legendary", tier: 8, sellPrice: 15000000, img: "https://lh3.googleusercontent.com/d/1uw5yq1fu1ssZ7BHj0EE3m8z-M0lF3OKc=w1000?authuser=0" },
               { id: 'gd2', name: "AlvanTron", rarity: "legendary", tier: 8, sellPrice: 25000000, img: "https://lh3.googleusercontent.com/d/1LQ8M27aj-XyfO2JVDYTp9PvgwIObNifr=w1000?authuser=0" },
               { id: 'gd3', name: "Danish Ferrari", rarity: "legendary", tier: 8, sellPrice: 45000000, img: "https://lh3.googleusercontent.com/d/1jOhjQlY2Rn-KNxNf7sCCS0XMCWN8gzkV=w1000?authuser=0" },
               { id: 'gd4', name: "Rey Mafia", rarity: "legendary", tier: 8, sellPrice: 55000000, img: "https://lh3.googleusercontent.com/d/1sOoiLG-Wk5JTlKPiGqT4KbcZlw2Z350F=w1000?authuser=0" },
               { id: 'gd5', name: "Alvan Satpam", rarity: "legendary", tier: 8, sellPrice: 10000000, img: "https://lh3.googleusercontent.com/d/1bUKbdYYsM8ZkfS5cioCc8YDF7HLWkLbu=w1000?authuser=0" },
+              
+              // VOID RANK ITEM
               { id: 'gd6', name: "Ken Alone", rarity: "void", tier: 10, sellPrice: 100000000, img: "https://lh3.googleusercontent.com/d/1hDolHpMu6auI5OrNaCwGRF3xh5zezpCZ=w1000?authuser=0" },
             ]
           }
@@ -394,8 +405,9 @@
 
             let rates = { common: 0, rare: 0, epic: 0, legendary: 0, void: 0 };
 
-            if (hasVoid && hasLegendary && !hasCommon && !hasRare) {
-                return { common: 0, rare: 0, epic: 0, legendary: 89, void: 11 };
+            // Khusus Plenger Case
+            if (currentCase.id === 'case_god') {
+                return { common: 50, rare: 40, epic: 0, legendary: 8, void: 2 };
             }
             
             if (hasVoid && hasRare && !hasLegendary && !hasCommon && !hasEpic) {
@@ -414,12 +426,29 @@
             const rand = Math.random() * 100;
             const pool = currentCase.pool;
             
+            // Logic Khusus PLENGER BOX (Case God)
             if (currentCase.id === 'case_god') {
-                if (rand < 11) {
+                // 50% Common (King Nopal Origin)
+                if (rand < 50) {
+                    const commonItems = pool.filter(a => a.rarity === 'common');
+                    return { ...commonItems[0], instanceId: Date.now() + Math.random() };
+                }
+                
+                // 40% Rare (King Nopal Horror) -> 50 + 40 = 90
+                if (rand < 90) {
+                    const rareItems = pool.filter(a => a.rarity === 'rare');
+                    return { ...rareItems[0], instanceId: Date.now() + Math.random() };
+                }
+
+                // 2% Void (>= 98)
+                if (rand >= 98) {
                     const voidItems = pool.filter(a => a.rarity === 'void');
                     if (voidItems.length > 0) return { ...voidItems[Math.floor(Math.random() * voidItems.length)], instanceId: Date.now() + Math.random() };
                 }
+                
+                // Sisa 8% (90 <= rand < 98) = Legendary
                 const legendaryItems = pool.filter(a => a.rarity === 'legendary');
+                // Weighted by Inverse Price
                 const totalWeight = legendaryItems.reduce((acc, item) => acc + (1 / item.sellPrice), 0);
                 let randomWeight = Math.random() * totalWeight;
                 for (const item of legendaryItems) {
@@ -429,6 +458,7 @@
                     }
                     randomWeight -= weight;
                 }
+                // Fallback
                 return { ...legendaryItems[0], instanceId: Date.now() + Math.random() };
             }
 
@@ -907,13 +937,11 @@
                   <div className="bg-[#111] border border-gray-800 w-full max-w-lg p-6 md:p-8 relative shadow-2xl my-auto min-h-[400px] flex flex-col">
                     <button onClick={() => { setShowTopUp(false); setTopUpStep(0); setSelectedTopUpAmount(0); setTopUpStatus('idle'); }} className="absolute top-4 right-4 text-gray-600 hover:text-white transition-colors p-2"><XIcon size={24}/></button>
                     
-                    {/* Header Top Up */}
                     <div className="flex items-center gap-3 mb-6 md:mb-8">
                        <CreditCard className="text-green-500" size={24} />
                        <h3 className="text-2xl md:text-3xl font-black text-white italic">ISI SALDO / TOP UP</h3>
                     </div>
 
-                    {/* Step 0: Pilih Nominal */}
                     {topUpStep === 0 && (
                         <div className="grid grid-cols-2 gap-3 md:gap-4">
                           {[500000, 1000000, 5000000, 10000000].map(amt => (
@@ -929,10 +957,8 @@
                         </div>
                     )}
 
-                    {/* Step 1: Pilih Metode & Bayar & Animasi */}
                     {topUpStep === 1 && (
                         <div className="flex-1 flex flex-col">
-                            {/* Jika sedang Processing atau Success, sembunyikan form pembayaran */}
                             {topUpStatus !== 'idle' ? (
                                 <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
                                     {topUpStatus === 'processing' && (
@@ -953,30 +979,17 @@
                                     )}
                                 </div>
                             ) : (
-                                /* Form Pembayaran Normal */
                                 <div>
                                     <div className="bg-black/50 p-4 rounded mb-6 border border-gray-800 text-center">
                                         <div className="text-gray-500 text-xs mb-1">Total Pembayaran</div>
                                         <div className="text-green-400 font-mono font-bold text-2xl">{formatRupiah(selectedTopUpAmount)}</div>
                                     </div>
 
-                                    {/* Payment Tabs */}
                                     <div className="flex mb-6 border-b border-gray-800">
-                                        <button 
-                                            onClick={() => setPaymentMethod('qris')}
-                                            className={`flex-1 pb-3 text-sm font-bold border-b-2 transition-colors ${paymentMethod === 'qris' ? 'border-white text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
-                                        >
-                                            QRIS
-                                        </button>
-                                        <button 
-                                            onClick={() => setPaymentMethod('blu')}
-                                            className={`flex-1 pb-3 text-sm font-bold border-b-2 transition-colors ${paymentMethod === 'blu' ? 'border-white text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
-                                        >
-                                            Blu BCA Digital
-                                        </button>
+                                        <button onClick={() => setPaymentMethod('qris')} className={`flex-1 pb-3 text-sm font-bold border-b-2 transition-colors ${paymentMethod === 'qris' ? 'border-white text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>QRIS</button>
+                                        <button onClick={() => setPaymentMethod('blu')} className={`flex-1 pb-3 text-sm font-bold border-b-2 transition-colors ${paymentMethod === 'blu' ? 'border-white text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>Blu BCA Digital</button>
                                     </div>
 
-                                    {/* Content QRIS */}
                                     {paymentMethod === 'qris' && (
                                         <div className="flex flex-col items-center animate-in fade-in zoom-in duration-300">
                                             <div className="bg-white p-2 rounded-lg mb-4">
@@ -986,7 +999,6 @@
                                         </div>
                                     )}
 
-                                    {/* Content Blu */}
                                     {paymentMethod === 'blu' && (
                                         <div className="flex flex-col items-center animate-in fade-in zoom-in duration-300 py-8">
                                             <div className="text-gray-400 text-sm mb-2">Nomor Rekening Blu</div>
@@ -998,20 +1010,9 @@
                                         </div>
                                     )}
 
-                                    {/* Action Buttons */}
                                     <div className="grid grid-cols-2 gap-4 mt-4">
-                                        <button 
-                                            onClick={() => setTopUpStep(0)}
-                                            className="bg-transparent border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white py-3 rounded font-bold transition-all"
-                                        >
-                                            KEMBALI
-                                        </button>
-                                        <button 
-                                            onClick={handleTopUpConfirm}
-                                            className="bg-green-600 hover:bg-green-500 text-black font-black py-3 rounded shadow-lg active:scale-95 transition-all"
-                                        >
-                                            KONFIRMASI BAYAR
-                                        </button>
+                                        <button onClick={() => setTopUpStep(0)} className="bg-transparent border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white py-3 rounded font-bold transition-all">KEMBALI</button>
+                                        <button onClick={handleTopUpConfirm} className="bg-green-600 hover:bg-green-500 text-black font-black py-3 rounded shadow-lg active:scale-95 transition-all">KONFIRMASI BAYAR</button>
                                     </div>
                                 </div>
                             )}
