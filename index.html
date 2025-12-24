@@ -95,7 +95,7 @@
         const Package = (props) => <IconBase {...props}><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22.08V12"/></IconBase>;
 
         // --- DATA & KONFIGURASI ---
-        const INITIAL_BALANCE = 10000000; // $100,000 * 100 = 10,000,000 Rupiah
+        const INITIAL_BALANCE = 10000000; // Rp 10.000.000
         const CARD_WIDTH = 180;
         const CARD_MARGIN_X = 6; 
         const TOTAL_ITEM_WIDTH = CARD_WIDTH + (CARD_MARGIN_X * 2); 
@@ -201,6 +201,78 @@
           }
         ];
 
+        // --- HELPER FUNCTIONS ---
+        function getRarityColor(rarity) {
+          switch(rarity) {
+            case 'common': return 'bg-gray-500'; case 'rare': return 'bg-blue-600'; case 'epic': return 'bg-purple-600'; case 'legendary': return 'bg-yellow-500'; 
+            case 'void': return 'bg-red-900'; 
+            default: return 'bg-gray-500';
+          }
+        }
+        function getRarityBorder(rarity) {
+          switch(rarity) {
+            case 'common': return 'border-gray-600'; case 'rare': return 'border-blue-500'; case 'epic': return 'border-purple-500'; case 'legendary': return 'border-yellow-500'; 
+            case 'void': return 'border-red-900 shadow-[0_0_30px_rgba(220,38,38,0.8)]'; 
+            default: return 'border-gray-600';
+          }
+        }
+        function getRarityText(rarity) {
+          switch(rarity) {
+            case 'common': return 'text-gray-400'; case 'rare': return 'text-blue-400'; case 'epic': return 'text-purple-400'; case 'legendary': return 'text-yellow-400'; 
+            case 'void': return 'text-red-500'; 
+            default: return 'text-gray-400';
+          }
+        }
+        function getRarityGradient(rarity) {
+          switch(rarity) {
+            case 'common': return 'from-gray-300 to-gray-600'; case 'rare': return 'from-blue-300 to-blue-700'; case 'epic': return 'from-purple-300 to-purple-800'; case 'legendary': return 'from-yellow-200 to-yellow-600'; 
+            case 'void': return 'from-gray-900 to-red-900'; 
+            default: return 'from-gray-300 to-gray-600';
+          }
+        }
+
+        // --- SUB-COMPONENTS ---
+        function GachaCard({ agent }) {
+          return (
+            <div className={`relative h-[220px] bg-[#111] border-b-[6px] ${getRarityBorder(agent.rarity)} rounded-sm overflow-hidden group shadow-[0_0_10px_rgba(0,0,0,0.5)]`}>
+              <img src={agent.img} alt={agent.name} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90"></div>
+              <div className={`absolute top-0 left-0 right-0 h-1 ${getRarityColor(agent.rarity)}`}></div>
+              <div className="absolute bottom-3 left-3 right-3">
+                <p className={`text-[9px] uppercase font-bold tracking-widest mb-1 ${getRarityText(agent.rarity)}`}>{agent.rarity}</p>
+                <p className="text-gray-100 font-bold text-sm truncate leading-none shadow-black drop-shadow-md">{agent.name}</p>
+              </div>
+            </div>
+          );
+        }
+
+        function InventoryCard({ item, onSell }) {
+          // Helper format rupiah di dalam card
+          const formatRupiahCard = (number) => {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+          };
+
+          return (
+            <div className="relative group bg-[#111] border border-gray-800 rounded hover:border-gray-600 transition-all duration-200">
+              <div className={`h-28 md:h-36 relative overflow-hidden border-b ${getRarityBorder(item.rarity)}`}>
+                <img src={item.img} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
+                <div className="absolute top-2 right-2 bg-black/70 backdrop-blur px-1.5 py-0.5 rounded text-[8px] md:text-[9px] font-mono text-white border border-white/10">T{item.tier}</div>
+              </div>
+              <div className="p-2 md:p-3">
+                <h4 className={`text-[9px] md:text-[10px] font-bold uppercase mb-1 truncate ${getRarityText(item.rarity)}`}>{item.name}</h4>
+                <div className="flex justify-between items-center mt-2 bg-black/30 p-1 rounded">
+                  <span className="text-[8px] md:text-[9px] text-gray-500">VAL</span>
+                  <span className="text-green-400 font-mono font-bold text-[8px] md:text-[10px]">{formatRupiahCard(item.sellPrice)}</span>
+                </div>
+              </div>
+              <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 p-2 cursor-pointer" onClick={onSell}>
+                <button className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded text-[10px] md:text-xs shadow-[0_0_10px_rgba(220,38,38,0.5)] transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">JUAL</button>
+              </div>
+            </div>
+          );
+        }
+
         // --- KONFETI COMPONENT ---
         const ConfettiExplosion = () => {
             const particles = Array.from({ length: 30 }).map((_, i) => {
@@ -233,9 +305,18 @@
 
         // --- APP COMPONENT ---
         function App() {
-          const [activeTab, setActiveTab] = useState('cases'); // 'cases' or 'box'
-          const [balance, setBalance] = useState(INITIAL_BALANCE);
-          const [inventory, setInventory] = useState([]);
+          const [activeTab, setActiveTab] = useState('cases'); 
+          
+          // --- PERSISTENT STATE ---
+          const [balance, setBalance] = useState(() => {
+              const saved = localStorage.getItem('darkcase_balance');
+              return saved ? parseInt(saved, 10) : INITIAL_BALANCE;
+          });
+
+          const [inventory, setInventory] = useState(() => {
+              const saved = localStorage.getItem('darkcase_inventory');
+              return saved ? JSON.parse(saved) : [];
+          });
           
           const [currentCase, setCurrentCase] = useState(CASES[0]);
           const [isProcessing, setIsProcessing] = useState(false);
@@ -256,6 +337,15 @@
           
           const audioCtxRef = useRef(null);
           const soundTimeoutRef = useRef(null);
+
+          // --- SAVE TO LOCALSTORAGE ---
+          useEffect(() => {
+              localStorage.setItem('darkcase_balance', balance.toString());
+          }, [balance]);
+
+          useEffect(() => {
+              localStorage.setItem('darkcase_inventory', JSON.stringify(inventory));
+          }, [inventory]);
 
           useEffect(() => {
             const pool = currentCase.pool;
@@ -282,7 +372,6 @@
           }, []);
 
           const calculateRates = (pool) => {
-            // Cek ketersediaan rarity di pool
             const hasCommon = pool.some(i => i.rarity === 'common');
             const hasRare = pool.some(i => i.rarity === 'rare');
             const hasEpic = pool.some(i => i.rarity === 'epic');
@@ -291,18 +380,14 @@
 
             let rates = { common: 0, rare: 0, epic: 0, legendary: 0, void: 0 };
 
-            // Khusus Plenger Case (Void & Legendary Only)
-            // 89% Legendary, 11% Void
             if (hasVoid && hasLegendary && !hasCommon && !hasRare) {
                 return { common: 0, rare: 0, epic: 0, legendary: 89, void: 11 };
             }
             
-            // Khusus Ramune Series (Void & Rare Only) - 90% Rare, 10% Void
             if (hasVoid && hasRare && !hasLegendary && !hasCommon && !hasEpic) {
                 return { common: 0, rare: 90, epic: 0, legendary: 0, void: 10 };
             }
 
-            // Logic standard
             if (hasCommon) rates.common += 50; else if (hasRare) rates.rare += 50; else if (hasEpic) rates.epic += 50; else rates.legendary += 50;
             if (hasRare) rates.rare += 35; else if (hasEpic) rates.epic += 35; else if (hasLegendary) rates.legendary += 35; else rates.common += 35;
             if (hasEpic) rates.epic += 12; else if (hasLegendary) rates.legendary += 12; else rates.rare += 12;
@@ -311,29 +396,18 @@
             return rates;
           };
 
-          // --- LOGIC PROBABILITAS BARU ---
           const getRandomAgent = () => {
             const rand = Math.random() * 100;
             const pool = currentCase.pool;
             
-            // Logic Khusus PLENGER BOX (Case God)
-            // 11% Void, 89% Legendary (Weighted by Price)
             if (currentCase.id === 'case_god') {
-                // 11% Chance for Void
                 if (rand < 11) {
                     const voidItems = pool.filter(a => a.rarity === 'void');
                     if (voidItems.length > 0) return { ...voidItems[Math.floor(Math.random() * voidItems.length)], instanceId: Date.now() + Math.random() };
                 }
-                
-                // 89% Chance for Legendary (Weighted)
                 const legendaryItems = pool.filter(a => a.rarity === 'legendary');
-                
-                // Hitung total bobot (Inverse Price: Semakin murah, semakin besar bobotnya)
-                // Rumus: 1 / harga
                 const totalWeight = legendaryItems.reduce((acc, item) => acc + (1 / item.sellPrice), 0);
-                
                 let randomWeight = Math.random() * totalWeight;
-                
                 for (const item of legendaryItems) {
                     const weight = 1 / item.sellPrice;
                     if (randomWeight < weight) {
@@ -341,22 +415,18 @@
                     }
                     randomWeight -= weight;
                 }
-                // Fallback jika loop tembus (jarang terjadi)
                 return { ...legendaryItems[0], instanceId: Date.now() + Math.random() };
             }
 
-            // Logic Khusus RAMUNE SERIES (10% Void, 90% Rare)
             if (currentCase.id === 'case_ramune') {
-                if (rand < 10) { // 10% Chance for Void (Hata Cola)
+                if (rand < 10) { 
                     const voidItems = pool.filter(a => a.rarity === 'void');
                     if (voidItems.length > 0) return { ...voidItems[Math.floor(Math.random() * voidItems.length)], instanceId: Date.now() + Math.random() };
                 }
-                // 90% Chance for Rare (Ramune Biasa)
                 const rareItems = pool.filter(a => a.rarity === 'rare');
                 return { ...rareItems[Math.floor(Math.random() * rareItems.length)], instanceId: Date.now() + Math.random() };
             }
             
-            // Logic Default (Untuk case lain)
             const common = pool.filter(a => a.rarity === 'common');
             const rare = pool.filter(a => a.rarity === 'rare');
             const epic = pool.filter(a => a.rarity === 'epic');
@@ -608,7 +678,6 @@
             }
           };
 
-          // Helper format uang Rupiah
           const formatRupiah = (number) => {
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
           };
@@ -846,77 +915,6 @@
                   </div>
                 </div>
               )}
-            </div>
-          );
-        }
-
-        // --- HELPER FUNCTIONS ---
-        function getRarityColor(rarity) {
-          switch(rarity) {
-            case 'common': return 'bg-gray-500'; case 'rare': return 'bg-blue-600'; case 'epic': return 'bg-purple-600'; case 'legendary': return 'bg-yellow-500'; 
-            case 'void': return 'bg-red-900'; 
-            default: return 'bg-gray-500';
-          }
-        }
-        function getRarityBorder(rarity) {
-          switch(rarity) {
-            case 'common': return 'border-gray-600'; case 'rare': return 'border-blue-500'; case 'epic': return 'border-purple-500'; case 'legendary': return 'border-yellow-500'; 
-            case 'void': return 'border-red-900 shadow-[0_0_30px_rgba(220,38,38,0.8)]'; 
-            default: return 'border-gray-600';
-          }
-        }
-        function getRarityText(rarity) {
-          switch(rarity) {
-            case 'common': return 'text-gray-400'; case 'rare': return 'text-blue-400'; case 'epic': return 'text-purple-400'; case 'legendary': return 'text-yellow-400'; 
-            case 'void': return 'text-red-500'; 
-            default: return 'text-gray-400';
-          }
-        }
-        function getRarityGradient(rarity) {
-          switch(rarity) {
-            case 'common': return 'from-gray-300 to-gray-600'; case 'rare': return 'from-blue-300 to-blue-700'; case 'epic': return 'from-purple-300 to-purple-800'; case 'legendary': return 'from-yellow-200 to-yellow-600'; 
-            case 'void': return 'from-gray-900 to-red-900'; 
-            default: return 'from-gray-300 to-gray-600';
-          }
-        }
-
-        function GachaCard({ agent }) {
-          return (
-            <div className={`relative h-[220px] bg-[#111] border-b-[6px] ${getRarityBorder(agent.rarity)} rounded-sm overflow-hidden group shadow-[0_0_10px_rgba(0,0,0,0.5)]`}>
-              <img src={agent.img} alt={agent.name} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90"></div>
-              <div className={`absolute top-0 left-0 right-0 h-1 ${getRarityColor(agent.rarity)}`}></div>
-              <div className="absolute bottom-3 left-3 right-3">
-                <p className={`text-[9px] uppercase font-bold tracking-widest mb-1 ${getRarityText(agent.rarity)}`}>{agent.rarity}</p>
-                <p className="text-gray-100 font-bold text-sm truncate leading-none shadow-black drop-shadow-md">{agent.name}</p>
-              </div>
-            </div>
-          );
-        }
-
-        function InventoryCard({ item, onSell }) {
-          // Helper format rupiah di dalam card
-          const formatRupiahCard = (number) => {
-            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
-          };
-
-          return (
-            <div className="relative group bg-[#111] border border-gray-800 rounded hover:border-gray-600 transition-all duration-200">
-              <div className={`h-28 md:h-36 relative overflow-hidden border-b ${getRarityBorder(item.rarity)}`}>
-                <img src={item.img} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
-                <div className="absolute top-2 right-2 bg-black/70 backdrop-blur px-1.5 py-0.5 rounded text-[8px] md:text-[9px] font-mono text-white border border-white/10">T{item.tier}</div>
-              </div>
-              <div className="p-2 md:p-3">
-                <h4 className={`text-[9px] md:text-[10px] font-bold uppercase mb-1 truncate ${getRarityText(item.rarity)}`}>{item.name}</h4>
-                <div className="flex justify-between items-center mt-2 bg-black/30 p-1 rounded">
-                  <span className="text-[8px] md:text-[9px] text-gray-500">VAL</span>
-                  <span className="text-green-400 font-mono font-bold text-[8px] md:text-[10px]">{formatRupiahCard(item.sellPrice)}</span>
-                </div>
-              </div>
-              <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 p-2 cursor-pointer" onClick={onSell}>
-                <button className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded text-[10px] md:text-xs shadow-[0_0_10px_rgba(220,38,38,0.5)] transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">JUAL</button>
-              </div>
             </div>
           );
         }
