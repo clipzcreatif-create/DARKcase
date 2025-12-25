@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DARKCASE: Cases & Mystery Boxes</title>
+    <title>DARKCASE: Cases, Enchant & PVP</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -26,7 +26,12 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Animasi Getar Box (Waiting) */
+        /* Animasi Umum */
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+
         @keyframes shake-box {
             0% { transform: translate(0, 0) rotate(0deg); }
             25% { transform: translate(-3px, 3px) rotate(-3deg); }
@@ -34,54 +39,40 @@
             75% { transform: translate(-3px, 3px) rotate(-3deg); }
             100% { transform: translate(0, 0) rotate(0deg); }
         }
-        .animate-shake {
-            animation: shake-box 0.4s infinite;
-            cursor: pointer;
-        }
+        .animate-shake { animation: shake-box 0.4s infinite; }
 
-        /* Animasi Ledakan Partikel (Confetti) */
-        @keyframes explode {
-            0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
-            50% { opacity: 1; }
-            100% { transform: translate(var(--tx), var(--ty)) scale(1.5) rotate(720deg); opacity: 0; }
-        }
-        .particle {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%; 
-            animation: explode 1s cubic-bezier(0, .9, .57, 1) forwards;
-            z-index: 50;
-        }
-        
-        /* Animasi Pop Box saat diklik */
         @keyframes pop-scale {
-            0% { transform: scale(1); }
-            50% { transform: scale(0.9); }
-            100% { transform: scale(1.5); opacity: 0; }
+            0% { transform: scale(1); } 50% { transform: scale(0.9); } 100% { transform: scale(1.5); opacity: 0; }
         }
-        .animate-pop-open {
-            animation: pop-scale 0.3s ease-in forwards;
+        .animate-pop-open { animation: pop-scale 0.3s ease-in forwards; }
+        
+        .animate-slide-up { animation: slide-up-fade 0.5s ease-out forwards; }
+        @keyframes slide-up-fade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* PVP Specific Animations */
+        @keyframes hit-shake {
+            0% { transform: translateX(0); }
+            20% { transform: translateX(-10px) rotate(-5deg); filter: brightness(2) saturate(0); } /* Flash White */
+            40% { transform: translateX(10px) rotate(5deg); }
+            60% { transform: translateX(-10px); }
+            80% { transform: translateX(10px); }
+            100% { transform: translateX(0); filter: none; }
+        }
+        .animate-hit { animation: hit-shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+
+        @keyframes slash {
+            0% { width: 0; opacity: 0; }
+            50% { width: 100%; opacity: 1; }
+            100% { width: 100%; opacity: 0; }
+        }
+        .slash-effect {
+            position: absolute; top: 50%; left: 0; height: 4px; background: white;
+            box-shadow: 0 0 10px red; transform: rotate(-45deg);
+            animation: slash 0.3s ease-out forwards;
         }
 
-        /* Loading Spinner */
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .animate-spin-slow {
-            animation: spin 2s linear infinite;
-        }
-        
-        /* Staggered Animation for Batch Reveal */
-        @keyframes slide-up-fade {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-slide-up {
-            animation: slide-up-fade 0.5s ease-out forwards;
-        }
+        /* Health Bar Transition */
+        .health-transition { transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
 <body>
@@ -91,10 +82,7 @@
         const { useState, useRef, useEffect } = React;
 
         // --- ICONS ---
-        const IconBase = ({ size = 24, className = "", children, ...props }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>
-        );
-
+        const IconBase = ({ size = 24, className = "", children, ...props }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>);
         const Wallet = (props) => <IconBase {...props}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></IconBase>;
         const CreditCard = (props) => <IconBase {...props}><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></IconBase>;
         const Database = (props) => <IconBase {...props}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></IconBase>;
@@ -112,19 +100,30 @@
         const CoffeeIcon = (props) => <IconBase {...props}><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></IconBase>;
         const Package = (props) => <IconBase {...props}><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22.08V12"/></IconBase>;
         const ArrowLeft = (props) => <IconBase {...props}><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></IconBase>;
-        const QrCode = (props) => <IconBase {...props}><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></IconBase>;
         const Copy = (props) => <IconBase {...props}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></IconBase>;
         const CheckCircle = (props) => <IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconBase>;
         const Loader = (props) => <IconBase {...props}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></IconBase>;
-        const Layers = (props) => <IconBase {...props}><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></IconBase>;
+        const Hammer = (props) => <IconBase {...props}><path d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9"/><path d="M17.64 15 22 10.64"/><path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25V7.86c0-.55-.45-1-1-1H14.14c-.83 0-1.64.32-2.25.92L9.64 10"/></IconBase>;
+        const Gem = (props) => <IconBase {...props}><path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/></IconBase>;
+        const ArrowUpCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4"/><path d="M12 16V8"/></IconBase>;
+        const Swords = (props) => <IconBase {...props}><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><line x1="19" x2="21" y1="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" x2="9" y1="14" y2="18"/><line x1="7" x2="4" y1="17" y2="20"/><line x1="3" x2="5" y1="19" y2="21"/></IconBase>;
 
         // --- DATA & KONFIGURASI ---
-        const INITIAL_BALANCE = 10000000; // Rp 10.000.000
+        const INITIAL_BALANCE = 10000000; 
         const CARD_WIDTH = 180;
         const CARD_MARGIN_X = 6; 
         const TOTAL_ITEM_WIDTH = CARD_WIDTH + (CARD_MARGIN_X * 2); 
 
-        // -- DATA BOXES / CASES (RUPIAH) --
+        // --- ENCHANT STONE DATA ---
+        const STONES = {
+            'stone_25': { name: "Weak Stone", chance: 0.25, color: "text-gray-400", border: "border-gray-500", bg: "bg-gray-800" },
+            'stone_50': { name: "Great Stone", chance: 0.50, color: "text-blue-400", border: "border-blue-500", bg: "bg-blue-900" },
+            'stone_80': { name: "Divine Stone", chance: 0.80, color: "text-yellow-400", border: "border-yellow-500", bg: "bg-yellow-900" }
+        };
+
+        const RARITY_ORDER = ['common', 'rare', 'epic', 'legendary', 'void'];
+
+        // -- DATA BOXES (ROOKIE & ELITE DELETED) --
         const CASES = [
           {
             id: 'case_coffee',
@@ -150,48 +149,8 @@
             ]
           },
           {
-            id: 'case_rookie',
-            name: 'ROOKIE BOX',
-            price: 100000,
-            color: 'border-gray-600',
-            bg: 'bg-gray-900/50',
-            iconColor: 'text-gray-400',
-            icon: <BoxIcon size={40} className="text-gray-400" strokeWidth={1.5} />,
-            desc: 'Entry level items.',
-            pool: [
-              { id: 'rk1', name: "Street Scout", rarity: "common", tier: 1, sellPrice: 20000, img: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=400" },
-              { id: 'rk2', name: "Urban Lookout", rarity: "common", tier: 1, sellPrice: 25000, img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400" },
-              { id: 'rk3', name: "Subway Guard", rarity: "rare", tier: 2, sellPrice: 150000, img: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=400" },
-              { id: 'rk4', name: "District Leader", rarity: "epic", tier: 3, sellPrice: 600000, img: "https://images.unsplash.com/photo-1504257432389-52343af06ae3?auto=format&fit=crop&q=80&w=400" },
-              { id: 'rk5', name: "THE ROOKIE KING", rarity: "legendary", tier: 4, sellPrice: 2500000, img: "https://images.unsplash.com/photo-1522556189639-b150ed9c4330?auto=format&fit=crop&q=80&w=400" },
-            ]
-          },
-          {
-            id: 'case_elite',
-            name: 'ELITE BOX',
-            price: 500000,
-            color: 'border-blue-600',
-            bg: 'bg-blue-900/20',
-            iconColor: 'text-blue-400',
-            icon: <BoxIcon size={40} className="text-blue-400" strokeWidth={1.5} />,
-            desc: 'Tactical gear inside.',
-            pool: [
-              { id: 'el1', name: "SWAT Breacher", rarity: "common", tier: 2, sellPrice: 80000, img: "https://images.unsplash.com/photo-1595152772835-219674b2a8a6?auto=format&fit=crop&q=80&w=400" },
-              { id: 'el2', name: "Field Medic", rarity: "common", tier: 2, sellPrice: 90000, img: "https://images.unsplash.com/photo-1579783483458-83d02161294e?auto=format&fit=crop&q=80&w=400" },
-              { id: 'el3', name: "Recon Sniper", rarity: "rare", tier: 3, sellPrice: 350000, img: "https://images.unsplash.com/photo-1533481405265-e9ce0c444d62?auto=format&fit=crop&q=80&w=400" },
-              { id: 'el4', name: "Captain Price", rarity: "epic", tier: 4, sellPrice: 1200000, img: "https://images.unsplash.com/photo-1594568284297-7c64464062b1?auto=format&fit=crop&q=80&w=400" },
-              { id: 'el5', name: "SPEC-OPS GHOST", rarity: "legendary", tier: 5, sellPrice: 5000000, img: "https://images.unsplash.com/photo-1612459284970-e8f027596582?auto=format&fit=crop&q=80&w=400" },
-            ]
-          },
-          {
-            id: 'case_ramune', 
-            name: 'RAMUNE SERIES',
-            price: 35000, 
-            color: 'border-cyan-400',
-            bg: 'bg-cyan-900/20',
-            iconColor: 'text-cyan-400',
-            icon: <BoxIcon size={40} className="text-cyan-400" strokeWidth={1.5} />,
-            desc: 'Fresh Japanese Soda Collection.',
+            id: 'case_ramune', name: 'RAMUNE SERIES', price: 35000, color: 'border-cyan-400', bg: 'bg-cyan-900/20', iconColor: 'text-cyan-400',
+            icon: <BoxIcon size={40} className="text-cyan-400" strokeWidth={1.5} />, desc: 'Fresh Japanese Soda.',
             pool: [
               { id: 'rm1', name: "Hata Blueberry", rarity: "rare", tier: 3, sellPrice: 35000, img: "https://lh3.googleusercontent.com/d/1YpGUv-1JGbNcUMbKJ4ONTj6eJ2NYojeE=w1000?authuser=0" },
               { id: 'rm2', name: "Hata Leci", rarity: "rare", tier: 3, sellPrice: 35000, img: "https://lh3.googleusercontent.com/d/1zB8Y7Lq__c4KduByWUh0jtVIYLHbiN5f=w1000?authuser=0" },
@@ -202,14 +161,8 @@
             ]
           },
           {
-            id: 'case_god',
-            name: 'PLENGER BOX',
-            price: 2000000, 
-            color: 'border-yellow-500',
-            bg: 'bg-yellow-900/20',
-            iconColor: 'text-yellow-500',
-            icon: <BoxIcon size={40} className="text-yellow-500" strokeWidth={1.5} />,
-            desc: 'Ultimate fortune inside.',
+            id: 'case_god', name: 'PLENGER BOX', price: 2000000, color: 'border-yellow-500', bg: 'bg-yellow-900/20', iconColor: 'text-yellow-500',
+            icon: <BoxIcon size={40} className="text-yellow-500" strokeWidth={1.5} />, desc: 'Ultimate fortune inside.',
             pool: [
               { id: 'gd_nopal_origin', name: "King Nopal Origin", rarity: "common", tier: 1, sellPrice: 200000, img: "https://lh3.googleusercontent.com/d/1l-ZgQH6ZHqstJlQrTj070D5fxv-LHQcv=w1000?authuser=0" },
               { id: 'gd_nopal_horror', name: "King Nopal Horror", rarity: "rare", tier: 2, sellPrice: 500000, img: "https://lh3.googleusercontent.com/d/1fveKgGIT7JKQSyvwNGTftYOzO5QMPkyT=w1000?authuser=0" },
@@ -223,7 +176,11 @@
           }
         ];
 
+        const ALL_ITEMS = CASES.flatMap(c => c.pool).sort((a, b) => a.sellPrice - b.sellPrice);
+
         // --- HELPER FUNCTIONS ---
+        const formatRupiah = (number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+
         function getRarityColor(rarity) {
           switch(rarity) {
             case 'common': return 'bg-gray-500'; case 'rare': return 'bg-blue-600'; case 'epic': return 'bg-purple-600'; case 'legendary': return 'bg-yellow-500'; 
@@ -245,13 +202,6 @@
             default: return 'text-gray-400';
           }
         }
-        function getRarityGradient(rarity) {
-          switch(rarity) {
-            case 'common': return 'from-gray-300 to-gray-600'; case 'rare': return 'from-blue-300 to-blue-700'; case 'epic': return 'from-purple-300 to-purple-800'; case 'legendary': return 'from-yellow-200 to-yellow-600'; 
-            case 'void': return 'from-gray-900 to-red-900'; 
-            default: return 'from-gray-300 to-gray-600';
-          }
-        }
 
         // --- SUB-COMPONENTS ---
         function GachaCard({ agent }) {
@@ -268,13 +218,12 @@
           );
         }
 
-        function InventoryCard({ item, onSell }) {
-          const formatRupiahCard = (number) => {
-            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
-          };
-
+        function InventoryCard({ item, onSell, onSelect, isSelected }) {
           return (
-            <div className="relative group bg-[#111] border border-gray-800 rounded hover:border-gray-600 transition-all duration-200">
+            <div 
+                className={`relative group bg-[#111] border ${isSelected ? 'border-yellow-500 ring-2 ring-yellow-500/50' : 'border-gray-800'} rounded hover:border-gray-600 transition-all duration-200 cursor-pointer`}
+                onClick={onSelect ? onSelect : null}
+            >
               <div className={`h-28 md:h-36 relative overflow-hidden border-b ${getRarityBorder(item.rarity)}`}>
                 <img src={item.img} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
@@ -284,17 +233,18 @@
                 <h4 className={`text-[9px] md:text-[10px] font-bold uppercase mb-1 truncate ${getRarityText(item.rarity)}`}>{item.name}</h4>
                 <div className="flex justify-between items-center mt-2 bg-black/30 p-1 rounded">
                   <span className="text-[8px] md:text-[9px] text-gray-500">VAL</span>
-                  <span className="text-green-400 font-mono font-bold text-[8px] md:text-[10px]">{formatRupiahCard(item.sellPrice)}</span>
+                  <span className="text-green-400 font-mono font-bold text-[8px] md:text-[10px]">{formatRupiah(item.sellPrice)}</span>
                 </div>
               </div>
-              <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 p-2 cursor-pointer" onClick={onSell}>
-                <button className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded text-[10px] md:text-xs shadow-[0_0_10px_rgba(220,38,38,0.5)] transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">JUAL</button>
-              </div>
+              {!onSelect && (
+                  <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 p-2 cursor-pointer" onClick={(e) => { e.stopPropagation(); onSell(); }}>
+                    <button className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded text-[10px] md:text-xs shadow-[0_0_10px_rgba(220,38,38,0.5)] transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">JUAL</button>
+                  </div>
+              )}
             </div>
           );
         }
 
-        // --- KONFETI COMPONENT ---
         const ConfettiExplosion = () => {
             const particles = Array.from({ length: 30 }).map((_, i) => {
                 const angle = Math.random() * 360; 
@@ -303,22 +253,12 @@
                 const ty = Math.sin(angle * Math.PI / 180) * distance + 'px';
                 const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFFFFF'];
                 const color = colors[Math.floor(Math.random() * colors.length)];
-                
                 return { id: i, tx, ty, color };
             });
-
             return (
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-0 h-0 z-50 pointer-events-none">
                     {particles.map(p => (
-                        <div 
-                            key={p.id}
-                            className="particle"
-                            style={{
-                                '--tx': p.tx,
-                                '--ty': p.ty,
-                                backgroundColor: p.color
-                            }}
-                        />
+                        <div key={p.id} className="particle" style={{ '--tx': p.tx, '--ty': p.ty, backgroundColor: p.color }} />
                     ))}
                 </div>
             );
@@ -326,7 +266,7 @@
 
         // --- APP COMPONENT ---
         function App() {
-          const [activeTab, setActiveTab] = useState('cases'); 
+          const [activeTab, setActiveTab] = useState('cases'); // cases | enchant | pvp
           const [balance, setBalance] = useState(() => {
               const saved = localStorage.getItem('darkcase_balance');
               return saved ? parseInt(saved, 10) : INITIAL_BALANCE;
@@ -335,10 +275,35 @@
               const saved = localStorage.getItem('darkcase_inventory');
               return saved ? JSON.parse(saved) : [];
           });
+          
+          const [stoneInventory, setStoneInventory] = useState(() => {
+              const saved = localStorage.getItem('darkcase_stones');
+              return saved ? JSON.parse(saved) : { 'stone_25': 0, 'stone_50': 0, 'stone_80': 0 };
+          });
+
+          // Exchange State
+          const [exchangeItem, setExchangeItem] = useState(null);
+          const [exchangeTarget, setExchangeTarget] = useState(null);
+          const [exchangeMultiplier, setExchangeMultiplier] = useState(2.0);
+          const [exchangeStreak, setExchangeStreak] = useState(0);
+          const [exchangeCards, setExchangeCards] = useState([]);
+          const [exchangeStatus, setExchangeStatus] = useState('idle');
+
+          // PVP State
+          const [pvpPlayerAgent, setPvpPlayerAgent] = useState(null);
+          const [pvpBotAgent, setPvpBotAgent] = useState(null);
+          const [pvpStatus, setPvpStatus] = useState('idle'); // idle, selecting, ready, battle, result_win, result_lose
+          const [pvpLogs, setPvpLogs] = useState([]);
+          const [pvpPlayerHp, setPvpPlayerHp] = useState(100);
+          const [pvpBotHp, setPvpBotHp] = useState(100);
+          const [pvpMaxPlayerHp, setPvpMaxPlayerHp] = useState(100);
+          const [pvpMaxBotHp, setPvpMaxBotHp] = useState(100);
+          const [pvpTurn, setPvpTurn] = useState('player'); // player | bot
+          
           const [currentCase, setCurrentCase] = useState(CASES[0]);
           const [isProcessing, setIsProcessing] = useState(false);
           const [winner, setWinner] = useState(null);
-          const [batchWinners, setBatchWinners] = useState(null); // NEW: For 5x results
+          const [batchWinners, setBatchWinners] = useState(null); 
           const [showTopUp, setShowTopUp] = useState(false);
           const [showReward, setShowReward] = useState(false);
           
@@ -354,15 +319,16 @@
 
           const [boxPhase, setBoxPhase] = useState('idle'); 
           const [pendingWinner, setPendingWinner] = useState(null); 
-
           const [soundEnabled, setSoundEnabled] = useState(true);
           const [infoCase, setInfoCase] = useState(null);
-          
+          const [stoneDropNotif, setStoneDropNotif] = useState(null);
           const audioCtxRef = useRef(null);
           const soundTimeoutRef = useRef(null);
 
           useEffect(() => { localStorage.setItem('darkcase_balance', balance.toString()); }, [balance]);
           useEffect(() => { localStorage.setItem('darkcase_inventory', JSON.stringify(inventory)); }, [inventory]);
+          useEffect(() => { localStorage.setItem('darkcase_stones', JSON.stringify(stoneInventory)); }, [stoneInventory]);
+
           useEffect(() => {
             const pool = currentCase.pool;
             const initialItems = Array(15).fill(null).map(() => pool[Math.floor(Math.random() * pool.length)]);
@@ -372,6 +338,7 @@
                 railRef.current.style.transform = 'translateX(0px)';
             }
           }, [currentCase]);
+
           useEffect(() => {
             const updateWidth = () => { if(containerRef.current) setContainerWidth(containerRef.current.offsetWidth); };
             setTimeout(updateWidth, 100);
@@ -384,27 +351,34 @@
             };
           }, []);
 
+          // --- LOGIC GACHA ---
           const calculateRates = (pool) => {
             const hasCommon = pool.some(i => i.rarity === 'common');
-            const hasRare = pool.some(i => i.rarity === 'rare');
-            const hasEpic = pool.some(i => i.rarity === 'epic');
-            const hasLegendary = pool.some(i => i.rarity === 'legendary');
-            const hasVoid = pool.some(i => i.rarity === 'void');
-
             let rates = { common: 0, rare: 0, epic: 0, legendary: 0, void: 0 };
-
-            if (currentCase.id === 'case_god') { return { common: 50, rare: 40, epic: 0, legendary: 8, void: 2 }; }
-            if (hasVoid && hasRare && !hasLegendary && !hasCommon && !hasEpic) { return { common: 0, rare: 90, epic: 0, legendary: 0, void: 10 }; }
-            if (hasCommon) rates.common += 50; else if (hasRare) rates.rare += 50; else if (hasEpic) rates.epic += 50; else rates.legendary += 50;
-            if (hasRare) rates.rare += 35; else if (hasEpic) rates.epic += 35; else if (hasLegendary) rates.legendary += 35; else rates.common += 35;
-            if (hasEpic) rates.epic += 12; else if (hasLegendary) rates.legendary += 12; else rates.rare += 12;
-            if (hasLegendary) rates.legendary += 3; else rates.epic += 3;
-            return rates;
+            if (currentCase.id === 'case_god') return { common: 50, rare: 40, epic: 0, legendary: 8, void: 2 };
+            if (currentCase.id === 'case_ramune') return { common: 0, rare: 90, epic: 0, legendary: 0, void: 10 };
+            if (hasCommon) rates.common += 50; 
+            return rates; 
           };
 
           const getRandomAgent = () => {
             const rand = Math.random() * 100;
             const pool = currentCase.pool;
+            
+            // Stone Drop
+            if (currentCase.id === 'case_god') {
+                const stoneRand = Math.random() * 100;
+                let droppedStone = null;
+                if (stoneRand < 0.1) droppedStone = 'stone_80';
+                else if (stoneRand < 2.1) droppedStone = 'stone_50';
+                else if (stoneRand < 12.1) droppedStone = 'stone_25';
+                if (droppedStone) {
+                    setStoneInventory(prev => ({ ...prev, [droppedStone]: prev[droppedStone] + 1 }));
+                    setStoneDropNotif(STONES[droppedStone].name);
+                    setTimeout(() => setStoneDropNotif(null), 3000);
+                }
+            }
+
             if (currentCase.id === 'case_god') {
                 if (rand < 50) return { ...pool.find(a => a.rarity === 'common'), instanceId: Date.now() + Math.random() };
                 if (rand < 90) return { ...pool.find(a => a.rarity === 'rare'), instanceId: Date.now() + Math.random() };
@@ -431,20 +405,226 @@
                 return { ...rareItems[Math.floor(Math.random() * rareItems.length)], instanceId: Date.now() + Math.random() };
             }
             const common = pool.filter(a => a.rarity === 'common');
-            const rare = pool.filter(a => a.rarity === 'rare');
-            const epic = pool.filter(a => a.rarity === 'epic');
-            const legendary = pool.filter(a => a.rarity === 'legendary');
-            let selectedPool = [];
-            if (rand < 50 && common.length > 0) selectedPool = common;
-            else if (rand < 85 && rare.length > 0) selectedPool = rare;
-            else if (rand < 97 && epic.length > 0) selectedPool = epic;
-            else if (legendary.length > 0) selectedPool = legendary;
-            else selectedPool = pool; 
-            if (selectedPool.length === 0) selectedPool = pool;
-            const baseAgent = selectedPool[Math.floor(Math.random() * selectedPool.length)];
-            return { ...baseAgent, instanceId: Date.now() + Math.random() };
+            if(common.length > 0) return { ...common[0], instanceId: Date.now() + Math.random() };
+            return { ...pool[0], instanceId: Date.now() + Math.random() };
           };
 
+          const getRandomBotAgent = () => {
+             // Bot picks random from ALL items
+             return ALL_ITEMS[Math.floor(Math.random() * ALL_ITEMS.length)];
+          };
+
+          // --- EXCHANGE LOGIC ---
+          const findUpgradeItem = (currentItem) => {
+              const currentIndex = ALL_ITEMS.findIndex(i => i.name === currentItem.name && i.sellPrice === currentItem.sellPrice);
+              if (currentIndex === -1 || currentIndex >= ALL_ITEMS.length - 1) return null; 
+              for (let i = currentIndex + 1; i < ALL_ITEMS.length; i++) {
+                  if (ALL_ITEMS[i].sellPrice > currentItem.sellPrice) return ALL_ITEMS[i];
+              }
+              return null; 
+          };
+          const calculateTargetItem = (currentItem, multiplier) => {
+              const targetPrice = currentItem.sellPrice * multiplier;
+              const potentialUpgrades = ALL_ITEMS.filter(i => i.sellPrice >= targetPrice);
+              if (potentialUpgrades.length > 0) return potentialUpgrades[0];
+              else return ALL_ITEMS[ALL_ITEMS.length - 1];
+          };
+          const handleExchangeSelect = (item) => {
+              const startMultiplier = 2.0;
+              const target = calculateTargetItem(item, startMultiplier);
+              if (item.sellPrice >= ALL_ITEMS[ALL_ITEMS.length - 1].sellPrice) { alert("Max Level!"); return; }
+              setExchangeItem(item);
+              setExchangeMultiplier(startMultiplier);
+              setExchangeStreak(0);
+              setExchangeTarget(target);
+              setExchangeStatus('ready'); 
+              setExchangeCards([]);
+          };
+          const handleExchangeCancel = () => {
+              if (exchangeStreak > 0) handleExchangeCashOut();
+              else { setExchangeItem(null); setExchangeTarget(null); setExchangeStatus('idle'); }
+          };
+          const startExchangeGame = () => {
+              if (!exchangeItem || !exchangeTarget) return;
+              if (exchangeStreak === 0) setInventory(prev => prev.filter(i => i.instanceId !== exchangeItem.instanceId));
+              const results = [true, true, true, false, false, false];
+              for (let i = results.length - 1; i > 0; i--) {
+                  const j = Math.floor(Math.random() * (i + 1));
+                  [results[i], results[j]] = [results[j], results[i]];
+              }
+              setExchangeCards(results.map((isWin, idx) => ({ id: idx, isWin: isWin, revealed: false })));
+              setExchangeStatus('playing');
+          };
+          const handleCardClick = (cardIndex) => {
+              if (exchangeStatus !== 'playing') return;
+              const newCards = [...exchangeCards];
+              const selectedCard = newCards[cardIndex];
+              selectedCard.revealed = true;
+              setExchangeCards(newCards);
+              setTimeout(() => { setExchangeCards(prev => prev.map(c => ({...c, revealed: true}))); }, 500);
+              if (selectedCard.isWin) {
+                  playWinSound('epic');
+                  setTimeout(() => setExchangeStatus('result_win'), 1000);
+              } else {
+                  playClickSound();
+                  setTimeout(() => setExchangeStatus('result_lose'), 1000);
+              }
+          };
+          const handleExchangeCashOut = () => {
+               let wonItem = exchangeStatus === 'result_win' ? { ...exchangeTarget, instanceId: Date.now() + Math.random() } : (exchangeStreak > 0 ? { ...exchangeItem, instanceId: Date.now() + Math.random() } : null);
+               if (wonItem) {
+                    setInventory(prev => [wonItem, ...prev]);
+                    alert(`CASH OUT: ${wonItem.name}`);
+               }
+               setExchangeItem(null); setExchangeTarget(null); setExchangeStatus('idle');
+          };
+          const handleExchangeContinue = () => {
+              const newStreak = exchangeStreak + 1;
+              const newMultiplier = 2.0 + (newStreak * 0.5); 
+              const wonItem = exchangeTarget;
+              if (wonItem.sellPrice >= ALL_ITEMS[ALL_ITEMS.length - 1].sellPrice) {
+                  const finalItem = { ...wonItem, instanceId: Date.now() + Math.random() };
+                  setInventory(prev => [finalItem, ...prev]);
+                  setExchangeItem(null); setExchangeTarget(null); setExchangeStatus('idle');
+                  alert(`MAX LEVEL REACHED! ${finalItem.name} gained!`);
+                  return;
+              }
+              const nextTarget = calculateTargetItem(wonItem, newMultiplier);
+              setExchangeItem(wonItem); setExchangeTarget(nextTarget); setExchangeStreak(newStreak); setExchangeMultiplier(newMultiplier); setExchangeStatus('ready');
+          };
+          const handleExchangeFinishLose = () => { setExchangeItem(null); setExchangeTarget(null); setExchangeStatus('idle'); };
+
+          // --- PVP LOGIC ---
+          const handlePvpSelect = (item) => {
+             setPvpPlayerAgent(item);
+             // Generate Bot immediately
+             const bot = getRandomBotAgent();
+             setPvpBotAgent({ ...bot, instanceId: Date.now() + Math.random() });
+             setPvpStatus('ready');
+          };
+
+          const startPvpBattle = () => {
+              if(!pvpPlayerAgent || !pvpBotAgent) return;
+              
+              // Remove Player Item from Inventory (Betting it)
+              setInventory(prev => prev.filter(i => i.instanceId !== pvpPlayerAgent.instanceId));
+              
+              // Init Stats based on Sell Price
+              const pMaxHp = pvpPlayerAgent.sellPrice; // HP = Price
+              const bMaxHp = pvpBotAgent.sellPrice;
+              
+              setPvpMaxPlayerHp(pMaxHp);
+              setPvpPlayerHp(pMaxHp);
+              setPvpMaxBotHp(bMaxHp);
+              setPvpBotHp(bMaxHp);
+              
+              setPvpLogs([`Battle Start! ${pvpPlayerAgent.name} VS ${pvpBotAgent.name}`]);
+              setPvpStatus('battle');
+              setPvpTurn('player');
+          };
+
+          const handlePvpAttack = () => {
+              if (pvpStatus !== 'battle' || pvpTurn !== 'player') return;
+              
+              // Player Attack
+              const dmg = Math.floor(pvpPlayerAgent.sellPrice / 4) + Math.floor(Math.random() * (pvpPlayerAgent.sellPrice / 10));
+              const newBotHp = Math.max(0, pvpBotHp - dmg);
+              
+              setPvpBotHp(newBotHp);
+              setPvpLogs(prev => [`You hit for ${formatRupiah(dmg)} dmg!`, ...prev]);
+              playClickSound(); // Hit sound
+
+              if (newBotHp <= 0) {
+                  setPvpStatus('result_win');
+                  playWinSound('legendary');
+                  return;
+              }
+              
+              setPvpTurn('bot');
+              
+              // Bot Turn Delay
+              setTimeout(() => {
+                  const botDmg = Math.floor(pvpBotAgent.sellPrice / 4) + Math.floor(Math.random() * (pvpBotAgent.sellPrice / 10));
+                  const newPlayerHp = Math.max(0, pvpPlayerHp - botDmg); // Use current state ref if possible, but here state is fine
+                  
+                  // Need to access current state inside timeout, functional update handles it
+                  setPvpPlayerHp(prevHp => {
+                      const finalHp = Math.max(0, prevHp - botDmg);
+                      if (finalHp <= 0) {
+                          setPvpStatus('result_lose');
+                      } else {
+                          setPvpTurn('player');
+                      }
+                      return finalHp;
+                  });
+                   setPvpLogs(prev => [`Bot hit you for ${formatRupiah(botDmg)} dmg!`, ...prev]);
+                   playClickSound();
+              }, 1000);
+          };
+          
+          const handlePvpClaimWin = () => {
+              // Get Bot Item + Return Player Item
+              // Create new instance for player item to avoid conflict, bot item is new
+              const returnedPlayerItem = { ...pvpPlayerAgent, instanceId: Date.now() + Math.random() };
+              const wonBotItem = { ...pvpBotAgent, instanceId: Date.now() + Math.random() + 1 };
+              
+              setInventory(prev => [wonBotItem, returnedPlayerItem, ...prev]);
+              setPvpStatus('idle');
+              setPvpPlayerAgent(null);
+              setPvpBotAgent(null);
+              alert(`MENANG! Anda mendapatkan ${wonBotItem.name}`);
+          };
+          
+          const handlePvpFinishLose = () => {
+              setPvpStatus('idle');
+              setPvpPlayerAgent(null);
+              setPvpBotAgent(null);
+          };
+
+          // --- ENCHANT LOGIC ---
+          const handleEnchant = () => {
+              if (!selectedAgent || !selectedStone) return;
+              if (stoneInventory[selectedStone] <= 0) return;
+              setEnchantStatus('processing');
+              playShakingSound(); 
+              setTimeout(() => {
+                  const stone = STONES[selectedStone];
+                  const rand = Math.random();
+                  const success = rand < stone.chance;
+                  setStoneInventory(prev => ({ ...prev, [selectedStone]: prev[selectedStone] - 1 }));
+                  if (success) {
+                      setEnchantStatus('success');
+                      playWinSound('epic'); 
+                      const currentRarityIndex = RARITY_ORDER.indexOf(selectedAgent.rarity);
+                      if (currentRarityIndex < RARITY_ORDER.length - 1) {
+                          const nextRarity = RARITY_ORDER[currentRarityIndex + 1];
+                          const upgradedAgent = { 
+                              ...selectedAgent, 
+                              rarity: nextRarity,
+                              sellPrice: selectedAgent.sellPrice * 3, 
+                              name: `[${nextRarity.toUpperCase()}] ${selectedAgent.name.replace(/^\[.*?\]\s/, '')}`, 
+                              instanceId: Date.now() + Math.random()
+                          };
+                          setInventory(prev => [upgradedAgent, ...prev.filter(i => i.instanceId !== selectedAgent.instanceId)]);
+                          setSelectedAgent(null); 
+                      } else {
+                           const upgradedAgent = { 
+                              ...selectedAgent, 
+                              sellPrice: selectedAgent.sellPrice * 2, 
+                              name: `MAX ${selectedAgent.name.replace(/^\[.*?\]\s/, '')}`,
+                              instanceId: Date.now() + Math.random()
+                          };
+                          setInventory(prev => [upgradedAgent, ...prev.filter(i => i.instanceId !== selectedAgent.instanceId)]);
+                          setSelectedAgent(null);
+                      }
+                  } else {
+                      setEnchantStatus('fail');
+                  }
+                  setTimeout(() => setEnchantStatus('idle'), 2000);
+              }, 2000);
+          };
+
+          // --- OTHER HANDLERS ---
           const handleNextCase = () => {
             const currentIndex = CASES.findIndex(c => c.id === currentCase.id);
             const nextIndex = (currentIndex + 1) % CASES.length;
@@ -506,31 +686,21 @@
              osc.start();
              osc.stop(ctx.currentTime + 0.2);
           };
-          
-          // --- NEW FUNCTION: Play Legendary Notification Sound ---
           const playLegendaryHitSound = () => {
              if (!soundEnabled || !audioCtxRef.current) return;
              const ctx = audioCtxRef.current;
-             
-             // Create high pitched metallic "Cekring" sound
              const osc = ctx.createOscillator();
              const gain = ctx.createGain();
-             
-             // High frequency sine wave with rapid decay
              osc.type = 'sine';
-             osc.frequency.setValueAtTime(2000, ctx.currentTime); // High pitch start
-             osc.frequency.exponentialRampToValueAtTime(500, ctx.currentTime + 0.4); // Decay pitch
-             
+             osc.frequency.setValueAtTime(2000, ctx.currentTime); 
+             osc.frequency.exponentialRampToValueAtTime(500, ctx.currentTime + 0.4); 
              gain.gain.setValueAtTime(0.5, ctx.currentTime);
-             gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4); // Volume decay
-             
+             gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4); 
              osc.connect(gain);
              gain.connect(ctx.destination);
-             
              osc.start();
              osc.stop(ctx.currentTime + 0.4);
           };
-
           const speakCongratulation = (text) => {
             if (!soundEnabled || !('speechSynthesis' in window)) return;
             window.speechSynthesis.cancel();
@@ -591,143 +761,79 @@
             }, currentDelay);
           };
 
-          // --- SPIN & BOX LOGIC FOR MULTI-PULL (5x) ---
           const performGacha = async (count = 1) => {
              if (isProcessing) return;
              const totalPrice = currentCase.price * count;
              if (balance < totalPrice) { setShowTopUp(true); return; }
-
              initAudio();
              setBalance(prev => prev - totalPrice);
              setIsProcessing(true);
              setWinner(null);
              setBatchWinners(null);
              setShowReward(false);
-
-             // 1. GENERATE REWARDS
              const results = [];
-             for(let i=0; i<count; i++) {
-                 results.push(getRandomAgent());
-             }
-
-             // 2. ANIMATION HANDLING
+             for(let i=0; i<count; i++) { results.push(getRandomAgent()); }
              if (count === 1) {
-                 // Single Logic (Existing)
                  const winningAgent = results[0];
-                 
-                 if (activeTab === 'cases') {
-                     // Reel Animation
-                     const pool = currentCase.pool;
-                     const landingIndex = 75; 
-                     const totalItems = 100; 
-                     const newSpinItems = [];
-                     for (let i = 0; i < totalItems; i++) {
-                        if (i === landingIndex) newSpinItems.push(winningAgent); 
-                        else newSpinItems.push(pool[Math.floor(Math.random() * pool.length)]);
-                     }
-                     setSpinItems(newSpinItems);
-                     if (railRef.current) { railRef.current.style.transition = 'none'; railRef.current.style.transform = 'translateX(0px)'; }
-                     
-                     requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                            if (railRef.current && containerWidth > 0) {
-                                const winningCardCenter = (landingIndex * TOTAL_ITEM_WIDTH) + (CARD_WIDTH / 2) + CARD_MARGIN_X;
-                                const centerOfViewport = containerWidth / 2;
-                                const targetTranslateX = winningCardCenter - centerOfViewport + (Math.random() * CARD_WIDTH * 0.7 - CARD_WIDTH * 0.35);
-                                railRef.current.style.transition = `transform 6000ms cubic-bezier(0.15, 0.90, 0.30, 1.0)`; 
-                                railRef.current.style.transform = `translateX(-${targetTranslateX}px)`;
-                                if (soundEnabled) { if (soundTimeoutRef.current) clearTimeout(soundTimeoutRef.current); playSoundLoop(Date.now(), 5500); }
-                            }
-                        });
-                     });
-
-                     setTimeout(() => {
-                        setIsProcessing(false);
-                        setWinner(winningAgent);
-                        setInventory(prev => [winningAgent, ...prev]);
-                        setShowReward(true);
-                        playWinSound(winningAgent.rarity);
-                     }, 6500);
-                 } else {
-                     // Box Animation (Single)
-                     setPendingWinner(winningAgent);
-                     setBoxPhase('purchased');
-                     playShakingSound();
-                     // Wait for user to click
+                 const pool = currentCase.pool;
+                 const landingIndex = 75; 
+                 const totalItems = 100; 
+                 const newSpinItems = [];
+                 for (let i = 0; i < totalItems; i++) {
+                    if (i === landingIndex) newSpinItems.push(winningAgent); 
+                    else newSpinItems.push(pool[Math.floor(Math.random() * pool.length)]);
                  }
-             } else {
-                 // MULTI-PULL LOGIC (5x - SEQUENTIAL)
-                 if (activeTab === 'cases') {
-                     // CASE MODE: Spin -> Stop -> Spin -> Stop...
-                     for (let i = 0; i < count; i++) {
-                        const targetAgent = results[i];
-                        const pool = currentCase.pool;
-                        const landingIndex = 35; // Shorter
-                        const totalItems = 50;
-                        const newSpinItems = [];
-                        for (let k = 0; k < totalItems; k++) {
-                           if (k === landingIndex) newSpinItems.push(targetAgent);
-                           else newSpinItems.push(pool[Math.floor(Math.random() * pool.length)]);
-                        }
-                        
-                        setSpinItems(newSpinItems);
-                        if (railRef.current) {
-                            railRef.current.style.transition = 'none';
-                            railRef.current.style.transform = 'translateX(0px)';
-                        }
-                        
-                        await new Promise(r => setTimeout(r, 50)); // DOM Update wait
-                        
+                 setSpinItems(newSpinItems);
+                 if (railRef.current) { railRef.current.style.transition = 'none'; railRef.current.style.transform = 'translateX(0px)'; }
+                 requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
                         if (railRef.current && containerWidth > 0) {
-                             const winningCardCenter = (landingIndex * TOTAL_ITEM_WIDTH) + (CARD_WIDTH / 2) + CARD_MARGIN_X;
-                             const centerOfViewport = containerWidth / 2;
-                             const targetTranslateX = winningCardCenter - centerOfViewport;
-                             
-                             const duration = 1200; // Cepat (1.2s)
-                             railRef.current.style.transition = `transform ${duration}ms cubic-bezier(0.2, 0.8, 0.2, 1.0)`;
-                             railRef.current.style.transform = `translateX(-${targetTranslateX}px)`;
-                             
-                             if (soundEnabled) {
-                                 let start = Date.now();
-                                 const loop = () => {
-                                     if(Date.now() - start > duration) return;
-                                     playClickSound();
-                                     setTimeout(loop, 150);
-                                 }
-                                 loop();
-                             }
-                             await new Promise(r => setTimeout(r, duration + 300)); // Wait finish + gap
-
-                             // PLAY CEKRING SOUND IF LEGENDARY/VOID HIT
-                             if (targetAgent.rarity === 'legendary' || targetAgent.rarity === 'void') {
-                                 playLegendaryHitSound();
-                             }
+                            const winningCardCenter = (landingIndex * TOTAL_ITEM_WIDTH) + (CARD_WIDTH / 2) + CARD_MARGIN_X;
+                            const centerOfViewport = containerWidth / 2;
+                            const targetTranslateX = winningCardCenter - centerOfViewport + (Math.random() * CARD_WIDTH * 0.7 - CARD_WIDTH * 0.35);
+                            railRef.current.style.transition = `transform 6000ms cubic-bezier(0.15, 0.90, 0.30, 1.0)`; 
+                            railRef.current.style.transform = `translateX(-${targetTranslateX}px)`;
+                            if (soundEnabled) { if (soundTimeoutRef.current) clearTimeout(soundTimeoutRef.current); playSoundLoop(Date.now(), 5500); }
                         }
-                     }
-                 } else {
-                     // BOX MODE: Shake -> Pop -> ...
-                     for (let i = 0; i < count; i++) {
-                         setBoxPhase('shaking');
-                         playShakingSound();
-                         await new Promise(r => setTimeout(r, 600)); 
-                         
-                         setBoxPhase('opening');
-                         playPopSound();
-                         
-                         // PLAY CEKRING SOUND IF LEGENDARY/VOID HIT
-                         const targetAgent = results[i];
-                         if (targetAgent.rarity === 'legendary' || targetAgent.rarity === 'void') {
-                              playLegendaryHitSound();
+                    });
+                 });
+                 setTimeout(() => {
+                    setIsProcessing(false);
+                    setWinner(winningAgent);
+                    setInventory(prev => [winningAgent, ...prev]);
+                    setShowReward(true);
+                    playWinSound(winningAgent.rarity);
+                 }, 6500);
+             } else {
+                 for (let i = 0; i < count; i++) {
+                    const targetAgent = results[i];
+                    const pool = currentCase.pool;
+                    const landingIndex = 35; 
+                    const totalItems = 50;
+                    const newSpinItems = [];
+                    for (let k = 0; k < totalItems; k++) {
+                       if (k === landingIndex) newSpinItems.push(targetAgent);
+                       else newSpinItems.push(pool[Math.floor(Math.random() * pool.length)]);
+                    }
+                    setSpinItems(newSpinItems);
+                    if (railRef.current) { railRef.current.style.transition = 'none'; railRef.current.style.transform = 'translateX(0px)'; }
+                    await new Promise(r => setTimeout(r, 50)); 
+                    if (railRef.current && containerWidth > 0) {
+                         const winningCardCenter = (landingIndex * TOTAL_ITEM_WIDTH) + (CARD_WIDTH / 2) + CARD_MARGIN_X;
+                         const centerOfViewport = containerWidth / 2;
+                         const targetTranslateX = winningCardCenter - centerOfViewport;
+                         const duration = 1200; 
+                         railRef.current.style.transition = `transform ${duration}ms cubic-bezier(0.2, 0.8, 0.2, 1.0)`;
+                         railRef.current.style.transform = `translateX(-${targetTranslateX}px)`;
+                         if (soundEnabled) {
+                             let start = Date.now();
+                             const loop = () => { if(Date.now() - start > duration) return; playClickSound(); setTimeout(loop, 150); }
+                             loop();
                          }
-
-                         await new Promise(r => setTimeout(r, 400)); 
-                         
-                         setBoxPhase('idle');
-                         await new Promise(r => setTimeout(r, 100));
-                     }
+                         await new Promise(r => setTimeout(r, duration + 300)); 
+                         if (targetAgent.rarity === 'legendary' || targetAgent.rarity === 'void') { playLegendaryHitSound(); }
+                    }
                  }
-
-                 // SHOW RESULTS
                  setIsProcessing(false);
                  setBatchWinners(results);
                  setInventory(prev => [...results, ...prev]);
@@ -737,6 +843,19 @@
              }
           };
 
+          const handleBuyBox = () => {
+            if (isProcessing) return;
+            if (balance < currentCase.price) { setShowTopUp(true); return; }
+            initAudio();
+            setBalance(prev => prev - currentCase.price);
+            setIsProcessing(true);
+            setWinner(null);
+            setShowReward(false);
+            const winningAgent = getRandomAgent();
+            setPendingWinner(winningAgent);
+            setBoxPhase('purchased');
+            playShakingSound();
+          };
           const handleOpenBox = () => {
             if (boxPhase !== 'purchased') return;
             setBoxPhase('opening'); 
@@ -751,21 +870,17 @@
                 setPendingWinner(null);
             }, 800);
           };
-
           const handleSell = (item) => {
             setBalance(prev => prev + item.sellPrice);
             setInventory(prev => prev.filter(i => i.instanceId !== item.instanceId));
-            // Jika single winner, tutup modal
             if (winner && winner.instanceId === item.instanceId) setShowReward(false);
           };
-
           const handleSellBatchItem = (item) => {
              setBalance(prev => prev + item.sellPrice);
              setInventory(prev => prev.filter(i => i.instanceId !== item.instanceId));
              setBatchWinners(prev => prev.filter(i => i.instanceId !== item.instanceId));
              if (batchWinners.length <= 1) setShowReward(false);
           };
-
           const handleSellAllBatch = () => {
               const totalValue = batchWinners.reduce((acc, item) => acc + item.sellPrice, 0);
               setBalance(prev => prev + totalValue);
@@ -773,7 +888,6 @@
               setShowReward(false);
               setBatchWinners(null);
           };
-
           const handleSellAllCommon = () => {
             const commons = inventory.filter(i => i.rarity === 'common');
             const totalValue = commons.reduce((acc, curr) => acc + curr.sellPrice, 0);
@@ -782,11 +896,6 @@
               setInventory(prev => prev.filter(i => i.rarity !== 'common'));
             }
           };
-
-          const formatRupiah = (number) => {
-            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
-          };
-
           const handleTopUpConfirm = () => {
               if(selectedTopUpAmount > 0) {
                   setTopUpStatus('processing');
@@ -806,6 +915,13 @@
 
           return (
             <div className="min-h-screen pb-20 overflow-x-hidden touch-manipulation">
+              {/* NOTIFICATION */}
+              {stoneDropNotif && (
+                  <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-black/80 border border-yellow-500 text-yellow-400 px-6 py-3 rounded-full z-[100] animate-bounce font-bold shadow-[0_0_20px_rgba(234,179,8,0.5)]">
+                      BONUS DROP: {stoneDropNotif}!
+                  </div>
+              )}
+
               <header className="border-b border-gray-900 bg-black/90 backdrop-blur-md sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 py-3 md:py-4 flex flex-col md:flex-row justify-between items-center gap-3 md:gap-4">
                   <div className="flex items-center gap-2">
@@ -817,8 +933,10 @@
                     </h1>
                   </div>
                   <div className="flex bg-gray-900/80 p-1 rounded-full border border-gray-800">
-                    <button onClick={() => !isProcessing && setActiveTab('cases')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === 'cases' ? 'bg-red-600 text-black shadow-lg' : 'text-gray-400 hover:text-white'}`} disabled={isProcessing}>CASE OPENING</button>
-                    <button onClick={() => !isProcessing && setActiveTab('box')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === 'box' ? 'bg-amber-500 text-black shadow-lg' : 'text-gray-400 hover:text-white'}`} disabled={isProcessing}>MYSTERY BOX</button>
+                    <button onClick={() => !isProcessing && setActiveTab('cases')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === 'cases' ? 'bg-red-600 text-black shadow-lg' : 'text-gray-400 hover:text-white'}`} disabled={isProcessing}>CASES</button>
+                    <button onClick={() => !isProcessing && setActiveTab('enchant')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === 'enchant' ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`} disabled={isProcessing}>ENCHANT</button>
+                    <button onClick={() => !isProcessing && setActiveTab('exchange')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === 'exchange' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`} disabled={isProcessing}>EXCHANGE</button>
+                    <button onClick={() => !isProcessing && setActiveTab('pvp')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === 'pvp' ? 'bg-orange-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`} disabled={isProcessing}>PVP ARENA</button>
                   </div>
                   <div className="flex items-center gap-2 md:gap-4">
                     <button onClick={() => setSoundEnabled(!soundEnabled)} className={`p-2 rounded-full border transition-all ${soundEnabled ? 'bg-gray-800 border-gray-700 text-green-400' : 'bg-red-900/20 border-red-900 text-red-500'}`}>
@@ -836,107 +954,403 @@
               </header>
 
               <main className="max-w-7xl mx-auto px-4 mt-6 md:mt-8 space-y-8 md:space-y-12">
-                <section className="max-w-4xl mx-auto">
-                    <div className="flex items-center justify-center gap-2 md:gap-8">
-                        <button onClick={handlePrevCase} disabled={isProcessing} className="p-3 bg-zinc-900 hover:bg-zinc-800 rounded-full border border-gray-800 disabled:opacity-30 transition-all active:scale-95">
-                            <ChevronLeft size={24} className="text-white" />
-                        </button>
-                        <div className={`relative w-full max-w-md p-6 rounded-xl border-2 text-center transition-all duration-300 ${currentCase.color} bg-zinc-900/90 shadow-2xl`}>
-                             <button onClick={() => setInfoCase(currentCase)} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors z-20 bg-black/50 p-1 rounded-full border border-gray-700"><Info size={20} /></button>
-                             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#050505] p-2 rounded-full border border-gray-800">
-                                 {activeTab === 'cases' ? currentCase.icon : <Package size={40} className={currentCase.iconColor} strokeWidth={1.5} />}
-                             </div>
-                             <div className="mt-4">
-                                <h3 className={`text-3xl font-black italic ${currentCase.iconColor} mb-2`}>{currentCase.name}</h3>
-                                <p className="text-gray-400 text-sm mb-6">{activeTab === 'box' ? 'Random mystery box drop.' : currentCase.desc}</p>
-                                <div className="inline-flex items-center gap-3 bg-black/60 px-6 py-3 rounded-lg border border-gray-800">
-                                    <span className="text-gray-500 text-xs font-mono uppercase tracking-widest">COST</span>
-                                    <span className={`font-mono font-bold text-xl ${currentCase.iconColor}`}>{formatRupiah(currentCase.price)}</span>
+                
+                {/* --- CONTENT AREA SWITCHER --- */}
+                {activeTab === 'cases' && (
+                    <>
+                        <section className="max-w-4xl mx-auto">
+                            <div className="flex items-center justify-center gap-2 md:gap-8">
+                                <button onClick={handlePrevCase} disabled={isProcessing} className="p-3 bg-zinc-900 hover:bg-zinc-800 rounded-full border border-gray-800 disabled:opacity-30 transition-all active:scale-95">
+                                    <ChevronLeft size={24} className="text-white" />
+                                </button>
+                                <div className={`relative w-full max-w-md p-6 rounded-xl border-2 text-center transition-all duration-300 ${currentCase.color} bg-zinc-900/90 shadow-2xl`}>
+                                     <button onClick={() => setInfoCase(currentCase)} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors z-20 bg-black/50 p-1 rounded-full border border-gray-700"><Info size={20} /></button>
+                                     <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#050505] p-2 rounded-full border border-gray-800">
+                                         {currentCase.icon}
+                                     </div>
+                                     <div className="mt-4">
+                                        <h3 className={`text-3xl font-black italic ${currentCase.iconColor} mb-2`}>{currentCase.name}</h3>
+                                        <p className="text-gray-400 text-sm mb-6">{currentCase.desc}</p>
+                                        <div className="inline-flex items-center gap-3 bg-black/60 px-6 py-3 rounded-lg border border-gray-800">
+                                            <span className="text-gray-500 text-xs font-mono uppercase tracking-widest">COST</span>
+                                            <span className={`font-mono font-bold text-xl ${currentCase.iconColor}`}>{formatRupiah(currentCase.price)}</span>
+                                        </div>
+                                     </div>
                                 </div>
-                             </div>
-                        </div>
-                        <button onClick={handleNextCase} disabled={isProcessing} className="p-3 bg-zinc-900 hover:bg-zinc-800 rounded-full border border-gray-800 disabled:opacity-30 transition-all active:scale-95">
-                            <ChevronRight size={24} className="text-white" />
-                        </button>
-                    </div>
-                    <div className="flex justify-center gap-2 mt-6">
-                        {CASES.map((c, idx) => (
-                            <div key={c.id} className={`w-2 h-2 rounded-full transition-all ${currentCase.id === c.id ? `bg-white w-6` : 'bg-gray-800'}`} />
-                        ))}
-                    </div>
-                </section>
+                                <button onClick={handleNextCase} disabled={isProcessing} className="p-3 bg-zinc-900 hover:bg-zinc-800 rounded-full border border-gray-800 disabled:opacity-30 transition-all active:scale-95">
+                                    <ChevronRight size={24} className="text-white" />
+                                </button>
+                            </div>
+                            <div className="flex justify-center gap-2 mt-6">
+                                {CASES.map((c, idx) => (
+                                    <div key={c.id} className={`w-2 h-2 rounded-full transition-all ${currentCase.id === c.id ? `bg-white w-6` : 'bg-gray-800'}`} />
+                                ))}
+                            </div>
+                        </section>
 
-                <section className="relative pt-4 md:pt-8 pb-4 min-h-[350px] flex flex-col justify-center">
-                  {activeTab === 'cases' ? (
-                    <div className="relative max-w-5xl mx-auto w-full">
-                        <div className="absolute left-1/2 -translate-x-1/2 top-0 z-30 flex flex-col items-center pointer-events-none">
-                           <div className="w-0 h-0 border-l-[10px] md:border-l-[12px] border-l-transparent border-r-[10px] md:border-r-[12px] border-r-transparent border-t-[16px] md:border-t-[20px] border-t-red-600 drop-shadow-lg"></div>
-                           <div className="w-[2px] h-[260px] bg-red-600/50 shadow-[0_0_10px_rgba(220,38,38,0.8)]"></div>
-                        </div>
-                        <div ref={containerRef} className={`relative w-full h-[260px] bg-[#080808] border-y-[4px] border-[#222] overflow-hidden rounded-lg shadow-2xl transition-colors ${currentCase.color.replace('border', 'shadow')}`}>
-                          <div className="absolute inset-y-0 left-0 w-16 md:w-48 bg-gradient-to-r from-black via-black/80 to-transparent z-20 pointer-events-none"></div>
-                          <div className="absolute inset-y-0 right-0 w-16 md:w-48 bg-gradient-to-l from-black via-black/80 to-transparent z-20 pointer-events-none"></div>
-                          <div ref={railRef} className="absolute top-0 left-0 h-full flex items-center" style={{ willChange: 'transform' }}>
-                            {spinItems.map((item, index) => (
-                              <div key={index} className="flex-shrink-0" style={{ width: `${CARD_WIDTH}px`, marginLeft: `${CARD_MARGIN_X}px`, marginRight: `${CARD_MARGIN_X}px` }}>
-                                <GachaCard agent={item} />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center w-full h-[300px] relative">
-                        {boxPhase === 'idle' && (
-                            <div className={`transform transition-all duration-300 hover:scale-105 cursor-pointer opacity-70 hover:opacity-100`} onClick={() => performGacha(1)}>
-                                <div className={`w-40 h-40 ${currentCase.bg} rounded-3xl border-4 ${currentCase.color} border-dashed flex items-center justify-center`}>
-                                    <Package size={60} className={currentCase.iconColor} strokeWidth={1} />
+                        <section className="relative pt-4 md:pt-8 pb-4 min-h-[350px] flex flex-col justify-center">
+                            <div className="relative max-w-5xl mx-auto w-full">
+                                <div className="absolute left-1/2 -translate-x-1/2 top-0 z-30 flex flex-col items-center pointer-events-none">
+                                   <div className="w-0 h-0 border-l-[10px] md:border-l-[12px] border-l-transparent border-r-[10px] md:border-r-[12px] border-r-transparent border-t-[16px] md:border-t-[20px] border-t-red-600 drop-shadow-lg"></div>
+                                   <div className="w-[2px] h-[260px] bg-red-600/50 shadow-[0_0_10px_rgba(220,38,38,0.8)]"></div>
                                 </div>
-                                <div className="text-center mt-4 text-gray-500 text-xs tracking-widest font-mono">PURCHASE TO REVEAL</div>
+                                <div ref={containerRef} className={`relative w-full h-[260px] bg-[#080808] border-y-[4px] border-[#222] overflow-hidden rounded-lg shadow-2xl transition-colors ${currentCase.color.replace('border', 'shadow')}`}>
+                                  <div className="absolute inset-y-0 left-0 w-16 md:w-48 bg-gradient-to-r from-black via-black/80 to-transparent z-20 pointer-events-none"></div>
+                                  <div className="absolute inset-y-0 right-0 w-16 md:w-48 bg-gradient-to-l from-black via-black/80 to-transparent z-20 pointer-events-none"></div>
+                                  <div ref={railRef} className="absolute top-0 left-0 h-full flex items-center" style={{ willChange: 'transform' }}>
+                                    {spinItems.map((item, index) => (<div key={index} className="flex-shrink-0" style={{ width: `${CARD_WIDTH}px`, marginLeft: `${CARD_MARGIN_X}px`, marginRight: `${CARD_MARGIN_X}px` }}><GachaCard agent={item} /></div>))}
+                                  </div>
+                                </div>
+                            </div>
+
+                            {!isProcessing && (
+                                <div className="mt-8 md:mt-12 flex flex-col items-center gap-4">
+                                    <div className="flex gap-4">
+                                        <button onClick={() => performGacha(1)} disabled={isProcessing} className={`group relative w-32 md:w-40 px-4 py-4 rounded transform skew-x-[-10deg] transition-all duration-200 active:scale-95 ${isProcessing ? 'bg-gray-800 cursor-not-allowed opacity-50' : `bg-gray-800 border-2 border-gray-600 hover:border-white text-white hover:scale-105`}`}>
+                                          <div className="skew-x-[10deg] flex flex-col items-center">
+                                            <span className="text-sm font-bold text-gray-400 mb-1">1x OPEN</span>
+                                            <span className={`text-sm font-mono font-bold ${currentCase.iconColor}`}>{formatRupiah(currentCase.price)}</span>
+                                          </div>
+                                        </button>
+                                        <button onClick={() => performGacha(5)} disabled={isProcessing} className={`group relative w-32 md:w-40 px-4 py-4 rounded transform skew-x-[-10deg] transition-all duration-200 active:scale-95 ${isProcessing ? 'bg-gray-800 cursor-not-allowed opacity-50' : `bg-red-600 border-2 border-red-500 hover:bg-red-500 text-black hover:scale-105 shadow-[0_0_30px_rgba(220,38,38,0.4)]`}`}>
+                                          <div className="skew-x-[10deg] flex flex-col items-center">
+                                            <span className="text-lg font-black tracking-widest mb-1">5x OPEN</span>
+                                            <span className="text-xs font-mono font-bold opacity-80">{formatRupiah(currentCase.price * 5)}</span>
+                                          </div>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </section>
+                    </>
+                )}
+
+                {activeTab === 'enchant' && (
+                    <section className="max-w-5xl mx-auto min-h-[500px] flex flex-col items-center justify-center p-4">
+                        <div className="text-center mb-8">
+                            <h2 className="text-4xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 mb-2">ENCHANT ALTAR</h2>
+                            <p className="text-gray-400 text-sm">Upgrade agent untuk melipatgandakan nilainya. Hati-hati, jika gagal batu akan hilang.</p>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row items-center gap-8 w-full">
+                            {/* LEFT: AGENT SLOT */}
+                            <div className="flex-1 w-full flex flex-col items-center">
+                                <div className="text-sm text-gray-500 mb-2 font-bold tracking-widest">AGENT</div>
+                                <div className={`w-48 h-64 border-2 border-dashed ${selectedAgent ? 'border-purple-500 bg-purple-900/20' : 'border-gray-700 bg-gray-900/50'} rounded-xl flex items-center justify-center relative overflow-hidden transition-all`}>
+                                    {selectedAgent ? (
+                                        <div className="w-full h-full relative group">
+                                            <img src={selectedAgent.img} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                            <div className="absolute bottom-0 w-full bg-black/80 p-2 text-center">
+                                                <p className="text-xs font-bold text-white truncate">{selectedAgent.name}</p>
+                                                <p className="text-green-400 text-[10px] font-mono">{formatRupiah(selectedAgent.sellPrice)}</p>
+                                            </div>
+                                            <button onClick={() => setSelectedAgent(null)} className="absolute top-2 right-2 bg-red-600 rounded-full p-1 hover:scale-110 transition-transform"><XIcon size={12} /></button>
+                                        </div>
+                                    ) : (
+                                        <div className="text-gray-600 text-center p-4">
+                                            <ShieldCheck size={48} className="mx-auto mb-2 opacity-50" />
+                                            <p className="text-xs">Pilih dari Inventory di bawah</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* CENTER: ACTION */}
+                            <div className="flex flex-col items-center gap-4">
+                                {enchantStatus === 'processing' ? (
+                                    <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                    <button 
+                                        onClick={handleEnchant}
+                                        disabled={!selectedAgent || !selectedStone || enchantStatus !== 'idle'}
+                                        className={`w-20 h-20 rounded-full flex items-center justify-center border-4 transition-all shadow-[0_0_30px_rgba(168,85,247,0.3)]
+                                            ${(!selectedAgent || !selectedStone) ? 'border-gray-700 bg-gray-800 text-gray-500 cursor-not-allowed' : 'border-purple-500 bg-purple-600 text-white hover:scale-110 hover:shadow-[0_0_50px_rgba(168,85,247,0.8)] cursor-pointer enchant-glow'}
+                                        `}
+                                    >
+                                        <Hammer size={32} />
+                                    </button>
+                                )}
+                                {enchantStatus === 'success' && <div className="text-green-400 font-black text-xl animate-bounce">SUKSES!</div>}
+                                {enchantStatus === 'fail' && <div className="text-red-500 font-black text-xl animate-shake">GAGAL...</div>}
+                            </div>
+
+                            {/* RIGHT: STONE SLOT */}
+                            <div className="flex-1 w-full flex flex-col items-center">
+                                <div className="text-sm text-gray-500 mb-2 font-bold tracking-widest">STONE</div>
+                                <div className="flex gap-2">
+                                    {Object.entries(STONES).map(([key, stone]) => (
+                                        <button 
+                                            key={key}
+                                            onClick={() => setSelectedStone(key)}
+                                            className={`relative w-20 h-24 border-2 ${selectedStone === key ? `${stone.border} bg-opacity-30` : 'border-gray-800 bg-opacity-10'} ${stone.bg} rounded-lg flex flex-col items-center justify-center p-2 transition-all hover:scale-105`}
+                                        >
+                                            <Gem size={24} className={stone.color} />
+                                            <span className={`text-[10px] font-bold mt-2 ${stone.color}`}>{stone.chance * 100}%</span>
+                                            <span className="text-[10px] text-gray-400 mt-1">x{stoneInventory[key]}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                )}
+                
+                {activeTab === 'exchange' && (
+                    <section className="max-w-5xl mx-auto min-h-[500px] flex flex-col items-center justify-center p-4">
+                        <div className="text-center mb-6">
+                            <h2 className="text-4xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 mb-2">EXCHANGE ALTAR</h2>
+                            <p className="text-gray-400 text-sm">Pertaruhkan itemmu untuk upgrade ke Tier lebih tinggi! (50% Chance).</p>
+                            {exchangeStreak > 0 && (
+                                <div className="mt-2 bg-yellow-900/40 text-yellow-400 px-4 py-1 rounded-full text-xs font-bold inline-block border border-yellow-600">
+                                    WIN STREAK: {exchangeStreak} <span className="mx-2">|</span> MULTIPLIER: {exchangeMultiplier}x
+                                </div>
+                            )}
+                        </div>
+
+                        {exchangeStatus === 'idle' && !exchangeItem && (
+                            <div className="border-2 border-dashed border-gray-700 bg-gray-900/50 rounded-xl p-8 text-center w-full max-w-md">
+                                <ArrowUpCircle size={48} className="mx-auto mb-4 text-purple-500 opacity-50" />
+                                <p className="text-gray-400 mb-2">Pilih item dari Inventory di bawah untuk memulai Exchange.</p>
                             </div>
                         )}
-                        {(boxPhase === 'purchased' || boxPhase === 'shaking') && (
-                            <div className="animate-shake relative group" onClick={boxPhase === 'purchased' ? handleOpenBox : null} title="Klik untuk membuka!">
-                                <div className={`w-56 h-56 bg-zinc-900 rounded-3xl border-4 ${currentCase.color} flex items-center justify-center shadow-[0_0_80px_rgba(255,255,255,0.15)]`}>
-                                    <Package size={100} className="text-white drop-shadow-lg" strokeWidth={1.5} />
+
+                        {/* DISPLAY MATCHUP OR RESULT */}
+                        {exchangeItem && (
+                            <div className="w-full flex flex-col items-center">
+                                {exchangeStatus === 'result_win' || exchangeStatus === 'result_lose' ? (
+                                    <div className="animate-in fade-in zoom-in duration-500 text-center mb-8">
+                                        {exchangeStatus === 'result_win' ? (
+                                            <>
+                                                <h3 className="text-3xl font-black text-green-400 mb-4">YOU WON!</h3>
+                                                <div className={`w-40 h-40 border-4 border-green-500 bg-black rounded-lg overflow-hidden relative mx-auto shadow-[0_0_50px_rgba(34,197,94,0.5)]`}>
+                                                    <img src={exchangeItem.img} className="w-full h-full object-cover" />
+                                                </div>
+                                                <div className="mt-6 flex gap-4 justify-center">
+                                                    <button onClick={handleExchangeCashOut} className="px-6 py-3 rounded bg-zinc-800 hover:bg-zinc-700 text-white font-bold border border-gray-600">
+                                                       {exchangeTarget === null ? "AMBIL HADIAH (MAX)" : "CASH OUT (AMBIL)"}
+                                                    </button>
+                                                    {exchangeTarget !== null && (
+                                                        <button onClick={handleExchangeContinue} className="px-6 py-3 rounded bg-purple-600 hover:bg-purple-500 text-white font-black shadow-lg animate-pulse">
+                                                            LANJUT ({exchangeMultiplier + 0.5}x)
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <h3 className="text-3xl font-black text-red-500 mb-4">YOU LOST...</h3>
+                                                <div className="text-6xl mb-4">💀</div>
+                                                <p className="text-gray-400 mb-6">Item Anda telah hangus.</p>
+                                                <button onClick={handleExchangeFinishLose} className="px-8 py-2 rounded bg-gray-800 hover:bg-gray-700 text-white">KEMBALI</button>
+                                            </>
+                                        )}
+                                    </div>
+                                ) : (
+                                    /* MATCHUP DISPLAY */
+                                    <div className="flex items-center gap-4 md:gap-8 mb-8">
+                                        <div className="flex flex-col items-center">
+                                            <div className="text-xs text-gray-500 mb-2">CURRENT ITEM</div>
+                                            <div className={`w-32 h-32 md:w-40 md:h-40 border-2 ${getRarityBorder(exchangeItem.rarity)} bg-black rounded-lg overflow-hidden relative`}>
+                                                <img src={exchangeItem.img} className="w-full h-full object-cover" />
+                                                <div className="absolute bottom-0 w-full bg-black/80 text-[10px] text-center text-white py-1">{formatRupiah(exchangeItem.sellPrice)}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col items-center justify-center">
+                                            <div className="text-purple-500 font-black text-xl animate-pulse">VS</div>
+                                            <div className="text-gray-500 text-[10px] mt-1">50% CHANCE</div>
+                                        </div>
+
+                                        <div className="flex flex-col items-center">
+                                            <div className="text-xs text-gray-500 mb-2">POTENTIAL UPGRADE</div>
+                                            {exchangeTarget ? (
+                                                <div className={`w-32 h-32 md:w-40 md:h-40 border-2 ${getRarityBorder(exchangeTarget.rarity)} bg-black rounded-lg overflow-hidden relative shadow-[0_0_20px_rgba(168,85,247,0.4)]`}>
+                                                    <img src={exchangeTarget.img} className="w-full h-full object-cover" />
+                                                    <div className="absolute bottom-0 w-full bg-black/80 text-[10px] text-center text-green-400 font-bold py-1">{formatRupiah(exchangeTarget.sellPrice)}</div>
+                                                </div>
+                                            ) : (
+                                                <div className="w-32 h-32 md:w-40 md:h-40 border-2 border-gray-700 bg-gray-800 rounded-lg flex items-center justify-center text-gray-600 text-xs">MAX LEVEL</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* ACTIONS */}
+                                {exchangeStatus === 'ready' && (
+                                    <div className="flex gap-4">
+                                        <button onClick={handleExchangeCancel} className="px-6 py-2 rounded bg-gray-800 hover:bg-gray-700 text-white font-bold">{exchangeStreak > 0 ? "CASH OUT" : "BATAL"}</button>
+                                        <button onClick={startExchangeGame} className="px-8 py-2 rounded bg-purple-600 hover:bg-purple-500 text-white font-black shadow-lg hover:scale-105 transition-transform">
+                                            START {exchangeMultiplier}x
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* CARD GAME GRID */}
+                                {exchangeStatus === 'playing' && (
+                                    <>
+                                        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-4 mt-4">
+                                            {exchangeCards.map((card, idx) => (
+                                                <div 
+                                                    key={card.id}
+                                                    onClick={() => !card.revealed && handleCardClick(idx)}
+                                                    className={`w-20 h-28 md:w-24 md:h-32 cursor-pointer transition-all duration-500 transform-style-3d relative ${card.revealed ? 'rotate-y-180' : 'hover:scale-105'}`}
+                                                >
+                                                    <div className="absolute inset-0 bg-gradient-to-br from-purple-900 to-black border-2 border-purple-500 rounded-lg flex items-center justify-center backface-hidden z-10">
+                                                        <span className="text-2xl font-black text-purple-700">?</span>
+                                                    </div>
+                                                    <div className={`absolute inset-0 rounded-lg flex items-center justify-center backface-hidden rotate-y-180 border-2 ${card.isWin ? 'bg-green-900/80 border-green-500' : 'bg-red-900/80 border-red-500'}`}>
+                                                        {card.isWin ? <CheckCircle size={32} className="text-green-400" /> : <XIcon size={32} className="text-red-500" />}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="mt-4 text-purple-400 animate-pulse text-sm">Pilih satu kartu...</p>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </section>
+                )}
+                
+                {activeTab === 'pvp' && (
+                    <section className="max-w-5xl mx-auto min-h-[500px] flex flex-col items-center justify-center p-4">
+                        {/* PVP HEADER */}
+                        <div className="text-center mb-6">
+                            <h2 className="text-4xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-600 mb-2">PVP ARENA</h2>
+                            <p className="text-gray-400 text-sm">Bertaruh 1 vs 1. Pemenang mengambil semuanya.</p>
+                        </div>
+
+                        {pvpStatus === 'idle' && (
+                            <div className="border-2 border-dashed border-gray-700 bg-gray-900/50 rounded-xl p-8 text-center w-full max-w-md">
+                                <Swords size={48} className="mx-auto mb-4 text-orange-500 opacity-50" />
+                                <p className="text-gray-400 mb-2">Pilih petarung dari Inventory di bawah.</p>
+                            </div>
+                        )}
+
+                        {/* SELECTION PREVIEW */}
+                        {pvpStatus === 'ready' && pvpPlayerAgent && (
+                             <div className="w-full flex flex-col items-center animate-in zoom-in duration-300">
+                                 <div className="flex items-center gap-8 mb-8">
+                                     {/* PLAYER */}
+                                     <div className="flex flex-col items-center">
+                                         <div className="text-blue-400 font-bold mb-2">YOU</div>
+                                         <div className={`w-40 h-40 border-4 border-blue-500 bg-black rounded-lg overflow-hidden relative`}>
+                                             <img src={pvpPlayerAgent.img} className="w-full h-full object-cover" />
+                                             <div className="absolute bottom-0 w-full bg-blue-900/80 text-center py-1">
+                                                 <p className="text-white font-bold text-xs">HP: {formatRupiah(pvpPlayerAgent.sellPrice)}</p>
+                                             </div>
+                                         </div>
+                                     </div>
+
+                                     <div className="text-2xl font-black text-white">VS</div>
+
+                                     {/* BOT (HIDDEN INITIALLY OR SHOWN?) - User said "Bot mempertaruhkan milik musuh" */}
+                                     <div className="flex flex-col items-center">
+                                         <div className="text-red-500 font-bold mb-2">ENEMY</div>
+                                         <div className={`w-40 h-40 border-4 border-red-500 bg-black rounded-lg overflow-hidden relative flex items-center justify-center`}>
+                                             {pvpBotAgent ? (
+                                                  <>
+                                                      <img src={pvpBotAgent.img} className="w-full h-full object-cover opacity-50 grayscale" />
+                                                      <span className="absolute text-red-500 font-black text-3xl">?</span>
+                                                  </>
+                                             ) : <div className="text-gray-500">Waiting...</div>}
+                                         </div>
+                                     </div>
+                                 </div>
+                                 
+                                 <button onClick={startPvpBattle} className="bg-red-600 hover:bg-red-500 text-white font-black px-10 py-4 rounded-lg shadow-[0_0_30px_rgba(220,38,38,0.5)] active:scale-95 transition-transform text-xl">
+                                     FIGHT!
+                                 </button>
+                             </div>
+                        )}
+
+                        {/* BATTLE ARENA */}
+                        {(pvpStatus === 'battle' || pvpStatus === 'result_win' || pvpStatus === 'result_lose') && pvpPlayerAgent && pvpBotAgent && (
+                            <div className="w-full max-w-4xl">
+                                {/* HP BARS */}
+                                <div className="flex justify-between items-center mb-8 gap-4">
+                                    <div className="flex-1">
+                                        <div className="flex justify-between text-xs mb-1">
+                                            <span className="text-blue-400 font-bold">{pvpPlayerAgent.name}</span>
+                                            <span className="text-gray-400">{formatRupiah(pvpPlayerHp)} / {formatRupiah(pvpMaxPlayerHp)}</span>
+                                        </div>
+                                        <div className="h-4 bg-gray-800 rounded-full overflow-hidden border border-gray-700">
+                                            <div className="h-full bg-blue-500 health-transition" style={{ width: `${(pvpPlayerHp / pvpMaxPlayerHp) * 100}%` }}></div>
+                                        </div>
+                                    </div>
+                                    <div className="text-xl font-black text-gray-600 px-2">VS</div>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between text-xs mb-1">
+                                            <span className="text-gray-400">{formatRupiah(pvpBotHp)} / {formatRupiah(pvpMaxBotHp)}</span>
+                                            <span className="text-red-500 font-bold">{pvpBotAgent.name}</span>
+                                        </div>
+                                        <div className="h-4 bg-gray-800 rounded-full overflow-hidden border border-gray-700">
+                                            <div className="h-full bg-red-500 health-transition" style={{ width: `${(pvpBotHp / pvpMaxBotHp) * 100}%` }}></div>
+                                        </div>
+                                    </div>
                                 </div>
-                                {boxPhase === 'purchased' && (
-                                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-red-600 text-white font-black text-xs px-3 py-1 rounded-full animate-bounce whitespace-nowrap">
-                                        KETUK UNTUK BUKA!
-                                        <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-red-600 rotate-45"></div>
+
+                                {/* FIGHTERS */}
+                                <div className="flex justify-between items-center relative mb-8">
+                                    {/* Player */}
+                                    <div className={`w-32 h-32 md:w-48 md:h-48 border-4 border-blue-500 rounded-xl overflow-hidden relative transition-transform duration-100 ${pvpTurn === 'bot' ? 'animate-hit' : ''}`}>
+                                        <img src={pvpPlayerAgent.img} className="w-full h-full object-cover" />
+                                        {/* Damage Number Popup would go here */}
+                                    </div>
+
+                                    {/* Action / Result */}
+                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                                        {pvpStatus === 'battle' ? (
+                                            pvpTurn === 'player' ? (
+                                                <button onClick={handlePvpAttack} className="bg-orange-500 hover:bg-orange-400 text-black font-black w-24 h-24 rounded-full border-4 border-white shadow-[0_0_30px_rgba(249,115,22,0.6)] active:scale-90 transition-all text-xl">
+                                                    ATTACK
+                                                </button>
+                                            ) : (
+                                                <div className="text-red-500 font-bold animate-pulse text-center">DEFEND!</div>
+                                            )
+                                        ) : (
+                                            <div className={`text-4xl font-black ${pvpStatus === 'result_win' ? 'text-green-400' : 'text-red-600'} drop-shadow-lg`}>
+                                                {pvpStatus === 'result_win' ? 'YOU WIN!' : 'DEFEATED'}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Bot */}
+                                    <div className={`w-32 h-32 md:w-48 md:h-48 border-4 border-red-500 rounded-xl overflow-hidden relative transition-transform duration-100 ${pvpTurn === 'player' ? 'animate-hit' : ''}`}>
+                                        <img src={pvpBotAgent.img} className="w-full h-full object-cover" />
+                                        {pvpTurn === 'player' && <div className="slash-effect"></div>}
+                                    </div>
+                                </div>
+
+                                {/* LOGS */}
+                                <div className="bg-black/40 h-32 overflow-y-auto p-4 rounded border border-gray-800 text-xs font-mono space-y-1 no-scrollbar">
+                                    {pvpLogs.map((log, i) => (
+                                        <div key={i} className={log.includes('You') ? 'text-green-400' : (log.includes('Battle') ? 'text-yellow-400 text-center font-bold my-2' : 'text-red-400')}>
+                                            {log}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* RESULT ACTIONS */}
+                                {pvpStatus !== 'battle' && (
+                                    <div className="flex justify-center mt-6">
+                                        {pvpStatus === 'result_win' ? (
+                                            <button onClick={handlePvpClaimWin} className="bg-green-600 hover:bg-green-500 text-black font-black px-8 py-3 rounded shadow-lg animate-bounce">
+                                                AMBIL HADIAH ({formatRupiah(pvpBotAgent.sellPrice)})
+                                            </button>
+                                        ) : (
+                                            <button onClick={handlePvpFinishLose} className="bg-gray-700 hover:bg-gray-600 text-white font-bold px-8 py-3 rounded">
+                                                KEMBALI
+                                            </button>
+                                        )}
                                     </div>
                                 )}
                             </div>
                         )}
-                        {boxPhase === 'opening' && (
-                            <div className="relative flex items-center justify-center">
-                                <div className={`w-56 h-56 bg-white rounded-3xl flex items-center justify-center animate-pop-open`}></div>
-                                <ConfettiExplosion />
-                            </div>
-                        )}
-                    </div>
-                  )}
+                    </section>
+                )}
 
-                  {!isProcessing && boxPhase === 'idle' && (
-                      <div className="mt-8 md:mt-12 flex flex-col items-center gap-4">
-                        <div className="flex gap-4">
-                            <button onClick={() => performGacha(1)} disabled={isProcessing} className={`group relative w-32 md:w-40 px-4 py-4 rounded transform skew-x-[-10deg] transition-all duration-200 active:scale-95 ${isProcessing ? 'bg-gray-800 cursor-not-allowed opacity-50' : `bg-gray-800 border-2 border-gray-600 hover:border-white text-white hover:scale-105`}`}>
-                              <div className="skew-x-[10deg] flex flex-col items-center">
-                                <span className="text-sm font-bold text-gray-400 mb-1">1x OPEN</span>
-                                <span className={`text-sm font-mono font-bold ${currentCase.iconColor}`}>{formatRupiah(currentCase.price)}</span>
-                              </div>
-                            </button>
-                            <button onClick={() => performGacha(5)} disabled={isProcessing} className={`group relative w-32 md:w-40 px-4 py-4 rounded transform skew-x-[-10deg] transition-all duration-200 active:scale-95 ${isProcessing ? 'bg-gray-800 cursor-not-allowed opacity-50' : `bg-red-600 border-2 border-red-500 hover:bg-red-500 text-black hover:scale-105 shadow-[0_0_30px_rgba(220,38,38,0.4)]`}`}>
-                              <div className="skew-x-[10deg] flex flex-col items-center">
-                                <span className="text-lg font-black tracking-widest mb-1">5x OPEN</span>
-                                <span className="text-xs font-mono font-bold opacity-80">{formatRupiah(currentCase.price * 5)}</span>
-                              </div>
-                            </button>
-                        </div>
-                      </div>
-                  )}
-                </section>
-
+                {/* --- INVENTORY (SHARED) --- */}
                 <section className="bg-[#0a0a0a] border border-gray-900 rounded-xl p-4 md:p-6 min-h-[400px]">
                   <div className="flex flex-col items-start gap-4 border-b border-gray-800 pb-4 mb-4 md:mb-8 md:flex-row md:items-center md:justify-between">
                     <div className="flex items-center gap-3">
@@ -950,7 +1364,21 @@
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
                     {inventory.slice().reverse().map((item) => (
-                      <InventoryCard key={item.instanceId} item={item} onSell={() => handleSell(item)} />
+                      <InventoryCard 
+                        key={item.instanceId} 
+                        item={item} 
+                        onSell={() => handleSell(item)}
+                        onSelect={
+                            activeTab === 'exchange' && exchangeStatus === 'idle' ? () => handleExchangeSelect(item) : 
+                            activeTab === 'enchant' && enchantStatus === 'idle' ? () => setSelectedAgent(item) :
+                            activeTab === 'pvp' && pvpStatus === 'idle' ? () => handlePvpSelect(item) : null
+                        }
+                        isSelected={
+                            (exchangeItem && exchangeItem.instanceId === item.instanceId) ||
+                            (selectedAgent && selectedAgent.instanceId === item.instanceId) ||
+                            (pvpPlayerAgent && pvpPlayerAgent.instanceId === item.instanceId)
+                        }
+                      />
                     ))}
                     {inventory.length === 0 && (
                       <div className="col-span-full py-20 flex flex-col items-center justify-center text-gray-800 border-2 border-dashed border-gray-900 rounded-xl">
@@ -963,6 +1391,7 @@
                 </section>
               </main>
 
+              {/* MODALS (INFO, TOPUP, WINNER) - SAMA SEPERTI SEBELUMNYA */}
               {infoCase && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto" onClick={() => setInfoCase(null)}>
                   <div className="bg-[#111] border border-gray-800 w-full max-w-lg p-6 rounded-xl relative shadow-2xl my-auto" onClick={e => e.stopPropagation()}>
@@ -976,6 +1405,19 @@
                                 <span className="font-mono font-bold text-white text-sm">{rate}%</span>
                             </div>
                         ))}
+                    </div>
+                    {/* INFO BATU DI SEMUA CASE */}
+                    <div className="mb-6 space-y-2 border-t border-gray-800 pt-4">
+                        <h4 className="text-sm font-bold text-yellow-500 uppercase tracking-widest mb-3">BONUS STONE DROPS</h4>
+                        <div className="flex justify-between text-xs text-gray-400">
+                            <span>Weak Stone (25%)</span> <span>10% Chance</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-blue-400">
+                            <span>Great Stone (50%)</span> <span>2% Chance</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-yellow-400">
+                            <span>Divine Stone (80%)</span> <span>0.1% Chance</span>
+                        </div>
                     </div>
                     <div>
                         <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">CONTENTS</h4>
@@ -1126,7 +1568,6 @@
                    <div className="flex flex-col items-center justify-center w-full max-w-4xl my-auto py-8" onClick={e => e.stopPropagation()}>
                        <h2 className="text-3xl md:text-5xl font-black italic tracking-tighter text-white mb-8 drop-shadow-lg text-center">5x OPENING RESULTS</h2>
                        
-                       {/* Grid 5 Item */}
                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-8 w-full">
                            {batchWinners.map((item, idx) => (
                                <div key={item.instanceId} className={`relative group animate-slide-up bg-zinc-900 rounded-lg overflow-hidden border-2 shadow-xl ${getRarityBorder(item.rarity)}`} style={{ animationDelay: `${idx * 100}ms` }}>
@@ -1148,7 +1589,6 @@
                            ))}
                        </div>
 
-                       {/* Summary & Actions */}
                        <div className="flex flex-col items-center gap-4">
                            <div className="text-gray-400 text-sm">TOTAL VALUE: <span className="text-green-400 font-bold font-mono text-xl">{formatRupiah(batchWinners.reduce((acc, i) => acc + i.sellPrice, 0))}</span></div>
                            <div className="flex gap-4">
@@ -1157,7 +1597,6 @@
                                <button onClick={() => { 
                                    setShowReward(false); 
                                    setBatchWinners(null); 
-                                   // Re-trigger 5x
                                    if(activeTab === 'cases') performGacha(5); 
                                    else performGacha(5); // Box 5x logic same as case currently
                                }} className="bg-red-600 hover:bg-red-500 text-black px-8 py-3 rounded font-bold shadow-lg transition-all">
