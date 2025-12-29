@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DARKCASE: Cases, Enchant & PVP</title>
+    <title>DARKCASE: Cases & Exchange</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -26,12 +26,13 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Animasi Umum */
+        /* Animasi Kartu Flip */
         .perspective-1000 { perspective: 1000px; }
         .transform-style-3d { transform-style: preserve-3d; }
         .backface-hidden { backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
 
+        /* Animasi Getar Box */
         @keyframes shake-box {
             0% { transform: translate(0, 0) rotate(0deg); }
             25% { transform: translate(-3px, 3px) rotate(-3deg); }
@@ -41,6 +42,16 @@
         }
         .animate-shake { animation: shake-box 0.4s infinite; }
 
+        /* Animasi Ledakan */
+        @keyframes explode {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(1.5) rotate(720deg); opacity: 0; }
+        }
+        .particle {
+            position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; border-radius: 50%;
+            animation: explode 1s cubic-bezier(0, .9, .57, 1) forwards; z-index: 50;
+        }
+        
         @keyframes pop-scale {
             0% { transform: scale(1); } 50% { transform: scale(0.9); } 100% { transform: scale(1.5); opacity: 0; }
         }
@@ -48,31 +59,15 @@
         
         .animate-slide-up { animation: slide-up-fade 0.5s ease-out forwards; }
         @keyframes slide-up-fade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* PVP Specific Animations */
-        @keyframes hit-shake {
-            0% { transform: translateX(0); }
-            20% { transform: translateX(-10px) rotate(-5deg); filter: brightness(2) saturate(0); } /* Flash White */
-            40% { transform: translateX(10px) rotate(5deg); }
-            60% { transform: translateX(-10px); }
-            80% { transform: translateX(10px); }
-            100% { transform: translateX(0); filter: none; }
+        
+        /* Glow Effect for Enchant */
+        @keyframes glow-pulse {
+            0%, 100% { box-shadow: 0 0 10px #eab308; }
+            50% { box-shadow: 0 0 30px #eab308; }
         }
-        .animate-hit { animation: hit-shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-
-        @keyframes slash {
-            0% { width: 0; opacity: 0; }
-            50% { width: 100%; opacity: 1; }
-            100% { width: 100%; opacity: 0; }
+        .enchant-glow {
+            animation: glow-pulse 2s infinite;
         }
-        .slash-effect {
-            position: absolute; top: 50%; left: 0; height: 4px; background: white;
-            box-shadow: 0 0 10px red; transform: rotate(-45deg);
-            animation: slash 0.3s ease-out forwards;
-        }
-
-        /* Health Bar Transition */
-        .health-transition { transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
 <body>
@@ -100,13 +95,14 @@
         const CoffeeIcon = (props) => <IconBase {...props}><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></IconBase>;
         const Package = (props) => <IconBase {...props}><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22.08V12"/></IconBase>;
         const ArrowLeft = (props) => <IconBase {...props}><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></IconBase>;
+        const QrCode = (props) => <IconBase {...props}><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></IconBase>;
         const Copy = (props) => <IconBase {...props}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></IconBase>;
         const CheckCircle = (props) => <IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconBase>;
         const Loader = (props) => <IconBase {...props}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></IconBase>;
+        const Layers = (props) => <IconBase {...props}><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></IconBase>;
         const Hammer = (props) => <IconBase {...props}><path d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9"/><path d="M17.64 15 22 10.64"/><path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25V7.86c0-.55-.45-1-1-1H14.14c-.83 0-1.64.32-2.25.92L9.64 10"/></IconBase>;
         const Gem = (props) => <IconBase {...props}><path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/></IconBase>;
         const ArrowUpCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4"/><path d="M12 16V8"/></IconBase>;
-        const Swords = (props) => <IconBase {...props}><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><line x1="19" x2="21" y1="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" x2="9" y1="14" y2="18"/><line x1="7" x2="4" y1="17" y2="20"/><line x1="3" x2="5" y1="19" y2="21"/></IconBase>;
 
         // --- DATA & KONFIGURASI ---
         const INITIAL_BALANCE = 10000000; 
@@ -121,20 +117,16 @@
             'stone_80': { name: "Divine Stone", chance: 0.80, color: "text-yellow-400", border: "border-yellow-500", bg: "bg-yellow-900" }
         };
 
+        // --- RARITY ORDER (Untuk Upgrade) ---
         const RARITY_ORDER = ['common', 'rare', 'epic', 'legendary', 'void'];
 
-        // -- DATA BOXES (ROOKIE & ELITE DELETED) --
         const CASES = [
           {
             id: 'case_coffee',
             name: 'COFFEE COLLECTION',
-            price: 100000, 
-            color: 'border-amber-700',
-            bg: 'bg-amber-900/20',
-            iconColor: 'text-amber-500',
+            price: 100000, color: 'border-amber-700', bg: 'bg-amber-900/20', iconColor: 'text-amber-500',
             icon: <CoffeeIcon size={40} className="text-amber-500" strokeWidth={1.5} />,
-            desc: 'Special Edition. 10 Premium Brews.',
-            isSpecial: true,
+            desc: 'Special Edition. 10 Premium Brews.', isSpecial: true,
             pool: [
               { id: 'cf1', name: "Dark Espresso", rarity: "common", tier: 1, sellPrice: 90000, img: "https://images.unsplash.com/photo-1559496417-e7f25cb247f3?auto=format&fit=crop&q=80&w=400" },
               { id: 'cf2', name: "Iced Americano", rarity: "common", tier: 1, sellPrice: 92000, img: "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&q=80&w=400" },
@@ -146,6 +138,28 @@
               { id: 'cf8', name: "Vanilla Affogato", rarity: "epic", tier: 3, sellPrice: 350000, img: "https://images.unsplash.com/photo-1599398054066-846f28917f38?auto=format&fit=crop&q=80&w=400" },
               { id: 'cf9', name: "Nitro Cold Brew", rarity: "epic", tier: 3, sellPrice: 400000, img: "https://images.unsplash.com/photo-1517701604599-bb29b5c7fa69?auto=format&fit=crop&q=80&w=400" },
               { id: 'cf10', name: "LEGENDARY LUWAK", rarity: "legendary", tier: 4, sellPrice: 550000, img: "https://images.unsplash.com/photo-1610632380989-680fe40816c6?auto=format&fit=crop&q=80&w=400" },
+            ]
+          },
+          {
+            id: 'case_rookie', name: 'ROOKIE BOX', price: 100000, color: 'border-gray-600', bg: 'bg-gray-900/50', iconColor: 'text-gray-400',
+            icon: <BoxIcon size={40} className="text-gray-400" strokeWidth={1.5} />, desc: 'Entry level items.',
+            pool: [
+              { id: 'rk1', name: "Street Scout", rarity: "common", tier: 1, sellPrice: 20000, img: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=400" },
+              { id: 'rk2', name: "Urban Lookout", rarity: "common", tier: 1, sellPrice: 25000, img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400" },
+              { id: 'rk3', name: "Subway Guard", rarity: "rare", tier: 2, sellPrice: 150000, img: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=400" },
+              { id: 'rk4', name: "District Leader", rarity: "epic", tier: 3, sellPrice: 600000, img: "https://images.unsplash.com/photo-1504257432389-52343af06ae3?auto=format&fit=crop&q=80&w=400" },
+              { id: 'rk5', name: "THE ROOKIE KING", rarity: "legendary", tier: 4, sellPrice: 2500000, img: "https://images.unsplash.com/photo-1522556189639-b150ed9c4330?auto=format&fit=crop&q=80&w=400" },
+            ]
+          },
+          {
+            id: 'case_elite', name: 'ELITE BOX', price: 500000, color: 'border-blue-600', bg: 'bg-blue-900/20', iconColor: 'text-blue-400',
+            icon: <BoxIcon size={40} className="text-blue-400" strokeWidth={1.5} />, desc: 'Tactical gear inside.',
+            pool: [
+              { id: 'el1', name: "SWAT Breacher", rarity: "common", tier: 2, sellPrice: 80000, img: "https://images.unsplash.com/photo-1595152772835-219674b2a8a6?auto=format&fit=crop&q=80&w=400" },
+              { id: 'el2', name: "Field Medic", rarity: "common", tier: 2, sellPrice: 90000, img: "https://images.unsplash.com/photo-1579783483458-83d02161294e?auto=format&fit=crop&q=80&w=400" },
+              { id: 'el3', name: "Recon Sniper", rarity: "rare", tier: 3, sellPrice: 350000, img: "https://images.unsplash.com/photo-1533481405265-e9ce0c444d62?auto=format&fit=crop&q=80&w=400" },
+              { id: 'el4', name: "Captain Price", rarity: "epic", tier: 4, sellPrice: 1200000, img: "https://images.unsplash.com/photo-1594568284297-7c64464062b1?auto=format&fit=crop&q=80&w=400" },
+              { id: 'el5', name: "SPEC-OPS GHOST", rarity: "legendary", tier: 5, sellPrice: 5000000, img: "https://images.unsplash.com/photo-1612459284970-e8f027596582?auto=format&fit=crop&q=80&w=400" },
             ]
           },
           {
@@ -176,6 +190,7 @@
           }
         ];
 
+        // --- GLOBAL ITEM LIST ---
         const ALL_ITEMS = CASES.flatMap(c => c.pool).sort((a, b) => a.sellPrice - b.sellPrice);
 
         // --- HELPER FUNCTIONS ---
@@ -200,6 +215,13 @@
             case 'common': return 'text-gray-400'; case 'rare': return 'text-blue-400'; case 'epic': return 'text-purple-400'; case 'legendary': return 'text-yellow-400'; 
             case 'void': return 'text-red-500'; 
             default: return 'text-gray-400';
+          }
+        }
+        function getRarityGradient(rarity) {
+          switch(rarity) {
+            case 'common': return 'from-gray-300 to-gray-600'; case 'rare': return 'from-blue-300 to-blue-700'; case 'epic': return 'from-purple-300 to-purple-800'; case 'legendary': return 'from-yellow-200 to-yellow-600'; 
+            case 'void': return 'from-gray-900 to-red-900'; 
+            default: return 'from-gray-300 to-gray-600';
           }
         }
 
@@ -266,7 +288,7 @@
 
         // --- APP COMPONENT ---
         function App() {
-          const [activeTab, setActiveTab] = useState('cases'); // cases | enchant | pvp
+          const [activeTab, setActiveTab] = useState('cases'); // cases | exchange
           const [balance, setBalance] = useState(() => {
               const saved = localStorage.getItem('darkcase_balance');
               return saved ? parseInt(saved, 10) : INITIAL_BALANCE;
@@ -276,29 +298,13 @@
               return saved ? JSON.parse(saved) : [];
           });
           
-          const [stoneInventory, setStoneInventory] = useState(() => {
-              const saved = localStorage.getItem('darkcase_stones');
-              return saved ? JSON.parse(saved) : { 'stone_25': 0, 'stone_50': 0, 'stone_80': 0 };
-          });
-
           // Exchange State
           const [exchangeItem, setExchangeItem] = useState(null);
-          const [exchangeTarget, setExchangeTarget] = useState(null);
+          const [exchangeTarget, setExchangeTarget] = useState(null); // The potential upgrade
           const [exchangeMultiplier, setExchangeMultiplier] = useState(2.0);
           const [exchangeStreak, setExchangeStreak] = useState(0);
-          const [exchangeCards, setExchangeCards] = useState([]);
-          const [exchangeStatus, setExchangeStatus] = useState('idle');
-
-          // PVP State
-          const [pvpPlayerAgent, setPvpPlayerAgent] = useState(null);
-          const [pvpBotAgent, setPvpBotAgent] = useState(null);
-          const [pvpStatus, setPvpStatus] = useState('idle'); // idle, selecting, ready, battle, result_win, result_lose
-          const [pvpLogs, setPvpLogs] = useState([]);
-          const [pvpPlayerHp, setPvpPlayerHp] = useState(100);
-          const [pvpBotHp, setPvpBotHp] = useState(100);
-          const [pvpMaxPlayerHp, setPvpMaxPlayerHp] = useState(100);
-          const [pvpMaxBotHp, setPvpMaxBotHp] = useState(100);
-          const [pvpTurn, setPvpTurn] = useState('player'); // player | bot
+          const [exchangeCards, setExchangeCards] = useState([]); // Array of { id, isWin, revealed }
+          const [exchangeStatus, setExchangeStatus] = useState('idle'); // idle, ready, playing, result_win, result_lose
           
           const [currentCase, setCurrentCase] = useState(CASES[0]);
           const [isProcessing, setIsProcessing] = useState(false);
@@ -321,13 +327,11 @@
           const [pendingWinner, setPendingWinner] = useState(null); 
           const [soundEnabled, setSoundEnabled] = useState(true);
           const [infoCase, setInfoCase] = useState(null);
-          const [stoneDropNotif, setStoneDropNotif] = useState(null);
           const audioCtxRef = useRef(null);
           const soundTimeoutRef = useRef(null);
 
           useEffect(() => { localStorage.setItem('darkcase_balance', balance.toString()); }, [balance]);
           useEffect(() => { localStorage.setItem('darkcase_inventory', JSON.stringify(inventory)); }, [inventory]);
-          useEffect(() => { localStorage.setItem('darkcase_stones', JSON.stringify(stoneInventory)); }, [stoneInventory]);
 
           useEffect(() => {
             const pool = currentCase.pool;
@@ -351,7 +355,7 @@
             };
           }, []);
 
-          // --- LOGIC GACHA ---
+          // --- LOGIC GACHA (Same as before) ---
           const calculateRates = (pool) => {
             const hasCommon = pool.some(i => i.rarity === 'common');
             let rates = { common: 0, rare: 0, epic: 0, legendary: 0, void: 0 };
@@ -364,21 +368,6 @@
           const getRandomAgent = () => {
             const rand = Math.random() * 100;
             const pool = currentCase.pool;
-            
-            // Stone Drop
-            if (currentCase.id === 'case_god') {
-                const stoneRand = Math.random() * 100;
-                let droppedStone = null;
-                if (stoneRand < 0.1) droppedStone = 'stone_80';
-                else if (stoneRand < 2.1) droppedStone = 'stone_50';
-                else if (stoneRand < 12.1) droppedStone = 'stone_25';
-                if (droppedStone) {
-                    setStoneInventory(prev => ({ ...prev, [droppedStone]: prev[droppedStone] + 1 }));
-                    setStoneDropNotif(STONES[droppedStone].name);
-                    setTimeout(() => setStoneDropNotif(null), 3000);
-                }
-            }
-
             if (currentCase.id === 'case_god') {
                 if (rand < 50) return { ...pool.find(a => a.rarity === 'common'), instanceId: Date.now() + Math.random() };
                 if (rand < 90) return { ...pool.find(a => a.rarity === 'rare'), instanceId: Date.now() + Math.random() };
@@ -409,219 +398,170 @@
             return { ...pool[0], instanceId: Date.now() + Math.random() };
           };
 
-          const getRandomBotAgent = () => {
-             // Bot picks random from ALL items
-             return ALL_ITEMS[Math.floor(Math.random() * ALL_ITEMS.length)];
-          };
-
-          // --- EXCHANGE LOGIC ---
-          const findUpgradeItem = (currentItem) => {
-              const currentIndex = ALL_ITEMS.findIndex(i => i.name === currentItem.name && i.sellPrice === currentItem.sellPrice);
-              if (currentIndex === -1 || currentIndex >= ALL_ITEMS.length - 1) return null; 
-              for (let i = currentIndex + 1; i < ALL_ITEMS.length; i++) {
-                  if (ALL_ITEMS[i].sellPrice > currentItem.sellPrice) return ALL_ITEMS[i];
-              }
-              return null; 
-          };
+          // --- EXCHANGE LOGIC (NEW) ---
+          
+          // Logic: Base target is roughly currentPrice * multiplier
           const calculateTargetItem = (currentItem, multiplier) => {
               const targetPrice = currentItem.sellPrice * multiplier;
+              
+              // Find closest item in ALL_ITEMS that is >= targetPrice
+              // If none, take the most expensive item
+              // But strictly must be > currentItem.sellPrice to be an "upgrade"
+              
               const potentialUpgrades = ALL_ITEMS.filter(i => i.sellPrice >= targetPrice);
-              if (potentialUpgrades.length > 0) return potentialUpgrades[0];
-              else return ALL_ITEMS[ALL_ITEMS.length - 1];
+              
+              if (potentialUpgrades.length > 0) {
+                  // Return cheapest of the upgrades (closest to target)
+                  return potentialUpgrades[0];
+              } else {
+                  // If we exceeded max price, just take the max item
+                  return ALL_ITEMS[ALL_ITEMS.length - 1];
+              }
           };
+
           const handleExchangeSelect = (item) => {
               const startMultiplier = 2.0;
               const target = calculateTargetItem(item, startMultiplier);
-              if (item.sellPrice >= ALL_ITEMS[ALL_ITEMS.length - 1].sellPrice) { alert("Max Level!"); return; }
+              
+              // Cek Max Level
+              if (item.sellPrice >= ALL_ITEMS[ALL_ITEMS.length - 1].sellPrice) {
+                 alert("Item ini sudah mencapai level maksimal (Ken Alone)!");
+                 return;
+              }
+
               setExchangeItem(item);
               setExchangeMultiplier(startMultiplier);
               setExchangeStreak(0);
               setExchangeTarget(target);
-              setExchangeStatus('ready'); 
+              setExchangeStatus('ready'); // Ready to start game
               setExchangeCards([]);
           };
+          
           const handleExchangeCancel = () => {
-              if (exchangeStreak > 0) handleExchangeCashOut();
-              else { setExchangeItem(null); setExchangeTarget(null); setExchangeStatus('idle'); }
+              // Jika belum mulai (Streak 0), batal biasa.
+              // Jika sudah ada Streak (Item sudah hilang dari inventory), Batal = Cash Out.
+              if (exchangeStreak > 0) {
+                 handleExchangeCashOut();
+              } else {
+                 setExchangeItem(null);
+                 setExchangeTarget(null);
+                 setExchangeStatus('idle');
+              }
           };
+
           const startExchangeGame = () => {
               if (!exchangeItem || !exchangeTarget) return;
-              if (exchangeStreak === 0) setInventory(prev => prev.filter(i => i.instanceId !== exchangeItem.instanceId));
+              
+              // Remove item from inventory if this is the first round (streak 0)
+              if (exchangeStreak === 0) {
+                  setInventory(prev => prev.filter(i => i.instanceId !== exchangeItem.instanceId));
+              }
+              
+              // Generate 6 Cards: 3 Success (Win), 3 Fail (Lose) -> 50% Chance
               const results = [true, true, true, false, false, false];
+              // Shuffle
               for (let i = results.length - 1; i > 0; i--) {
                   const j = Math.floor(Math.random() * (i + 1));
                   [results[i], results[j]] = [results[j], results[i]];
               }
-              setExchangeCards(results.map((isWin, idx) => ({ id: idx, isWin: isWin, revealed: false })));
+              
+              const cards = results.map((isWin, idx) => ({
+                  id: idx,
+                  isWin: isWin,
+                  revealed: false
+              }));
+              
+              setExchangeCards(cards);
               setExchangeStatus('playing');
           };
+
           const handleCardClick = (cardIndex) => {
               if (exchangeStatus !== 'playing') return;
+              
               const newCards = [...exchangeCards];
               const selectedCard = newCards[cardIndex];
               selectedCard.revealed = true;
               setExchangeCards(newCards);
-              setTimeout(() => { setExchangeCards(prev => prev.map(c => ({...c, revealed: true}))); }, 500);
+              
+              // Reveal all after short delay
+               setTimeout(() => {
+                   setExchangeCards(prev => prev.map(c => ({...c, revealed: true})));
+               }, 500);
+
               if (selectedCard.isWin) {
                   playWinSound('epic');
-                  setTimeout(() => setExchangeStatus('result_win'), 1000);
+                  setTimeout(() => {
+                      setExchangeStatus('result_win');
+                  }, 1000);
               } else {
-                  playClickSound();
-                  setTimeout(() => setExchangeStatus('result_lose'), 1000);
+                  playClickSound(); // Sad sound ideally
+                  setTimeout(() => {
+                      setExchangeStatus('result_lose');
+                  }, 1000);
               }
           };
+          
           const handleExchangeCashOut = () => {
-               let wonItem = exchangeStatus === 'result_win' ? { ...exchangeTarget, instanceId: Date.now() + Math.random() } : (exchangeStreak > 0 ? { ...exchangeItem, instanceId: Date.now() + Math.random() } : null);
+               // Give the TARGET item (or CURRENT item being held depending on context)
+               // In result_win, targetUpgradeItem is the WON item.
+               // If cancelling via "BATAL" in middle of streak, exchangeItem is the current held item.
+               
+               let wonItem = null;
+               
+               if (exchangeStatus === 'result_win') {
+                    // Win state: Take the upgraded item
+                    wonItem = { ...exchangeTarget, instanceId: Date.now() + Math.random() };
+               } else if (exchangeStreak > 0) {
+                    // Mid-game cancel: Take current held item
+                    wonItem = { ...exchangeItem, instanceId: Date.now() + Math.random() };
+               }
+
                if (wonItem) {
                     setInventory(prev => [wonItem, ...prev]);
-                    alert(`CASH OUT: ${wonItem.name}`);
+                    alert(`CASH OUT BERHASIL! ${wonItem.name} ditambahkan ke inventory.`);
                }
-               setExchangeItem(null); setExchangeTarget(null); setExchangeStatus('idle');
+               
+               // Reset
+               setExchangeItem(null);
+               setExchangeTarget(null);
+               setExchangeStatus('idle');
           };
+          
           const handleExchangeContinue = () => {
+              // Prepare next round
               const newStreak = exchangeStreak + 1;
-              const newMultiplier = 2.0 + (newStreak * 0.5); 
+              const newMultiplier = 2.0 + (newStreak * 0.5); // 2.5, 3.0, etc.
+              
+              // Base for calculation is the ITEM WE JUST WON (exchangeTarget)
               const wonItem = exchangeTarget;
+              
+              // Cek Max Level sebelum lanjut
               if (wonItem.sellPrice >= ALL_ITEMS[ALL_ITEMS.length - 1].sellPrice) {
+                  // Auto Cash Out logic
                   const finalItem = { ...wonItem, instanceId: Date.now() + Math.random() };
                   setInventory(prev => [finalItem, ...prev]);
-                  setExchangeItem(null); setExchangeTarget(null); setExchangeStatus('idle');
-                  alert(`MAX LEVEL REACHED! ${finalItem.name} gained!`);
+                  setExchangeItem(null);
+                  setExchangeTarget(null);
+                  setExchangeStatus('idle');
+                  alert(`MAX LEVEL REACHED! ${finalItem.name} (The Ultimate) otomatis masuk inventory!`);
                   return;
               }
+
               const nextTarget = calculateTargetItem(wonItem, newMultiplier);
-              setExchangeItem(wonItem); setExchangeTarget(nextTarget); setExchangeStreak(newStreak); setExchangeMultiplier(newMultiplier); setExchangeStatus('ready');
-          };
-          const handleExchangeFinishLose = () => { setExchangeItem(null); setExchangeTarget(null); setExchangeStatus('idle'); };
-
-          // --- PVP LOGIC ---
-          const handlePvpSelect = (item) => {
-             setPvpPlayerAgent(item);
-             // Generate Bot immediately
-             const bot = getRandomBotAgent();
-             setPvpBotAgent({ ...bot, instanceId: Date.now() + Math.random() });
-             setPvpStatus('ready');
-          };
-
-          const startPvpBattle = () => {
-              if(!pvpPlayerAgent || !pvpBotAgent) return;
               
-              // Remove Player Item from Inventory (Betting it)
-              setInventory(prev => prev.filter(i => i.instanceId !== pvpPlayerAgent.instanceId));
-              
-              // Init Stats based on Sell Price
-              const pMaxHp = pvpPlayerAgent.sellPrice; // HP = Price
-              const bMaxHp = pvpBotAgent.sellPrice;
-              
-              setPvpMaxPlayerHp(pMaxHp);
-              setPvpPlayerHp(pMaxHp);
-              setPvpMaxBotHp(bMaxHp);
-              setPvpBotHp(bMaxHp);
-              
-              setPvpLogs([`Battle Start! ${pvpPlayerAgent.name} VS ${pvpBotAgent.name}`]);
-              setPvpStatus('battle');
-              setPvpTurn('player');
-          };
-
-          const handlePvpAttack = () => {
-              if (pvpStatus !== 'battle' || pvpTurn !== 'player') return;
-              
-              // Player Attack
-              const dmg = Math.floor(pvpPlayerAgent.sellPrice / 4) + Math.floor(Math.random() * (pvpPlayerAgent.sellPrice / 10));
-              const newBotHp = Math.max(0, pvpBotHp - dmg);
-              
-              setPvpBotHp(newBotHp);
-              setPvpLogs(prev => [`You hit for ${formatRupiah(dmg)} dmg!`, ...prev]);
-              playClickSound(); // Hit sound
-
-              if (newBotHp <= 0) {
-                  setPvpStatus('result_win');
-                  playWinSound('legendary');
-                  return;
-              }
-              
-              setPvpTurn('bot');
-              
-              // Bot Turn Delay
-              setTimeout(() => {
-                  const botDmg = Math.floor(pvpBotAgent.sellPrice / 4) + Math.floor(Math.random() * (pvpBotAgent.sellPrice / 10));
-                  const newPlayerHp = Math.max(0, pvpPlayerHp - botDmg); // Use current state ref if possible, but here state is fine
-                  
-                  // Need to access current state inside timeout, functional update handles it
-                  setPvpPlayerHp(prevHp => {
-                      const finalHp = Math.max(0, prevHp - botDmg);
-                      if (finalHp <= 0) {
-                          setPvpStatus('result_lose');
-                      } else {
-                          setPvpTurn('player');
-                      }
-                      return finalHp;
-                  });
-                   setPvpLogs(prev => [`Bot hit you for ${formatRupiah(botDmg)} dmg!`, ...prev]);
-                   playClickSound();
-              }, 1000);
+              // Update State
+              setExchangeItem(wonItem); // We now "hold" the target we just won
+              setExchangeTarget(nextTarget);   // New target
+              setExchangeStreak(newStreak);
+              setExchangeMultiplier(newMultiplier);
+              setExchangeStatus('ready');      // Back to ready screen to show matchup
           };
           
-          const handlePvpClaimWin = () => {
-              // Get Bot Item + Return Player Item
-              // Create new instance for player item to avoid conflict, bot item is new
-              const returnedPlayerItem = { ...pvpPlayerAgent, instanceId: Date.now() + Math.random() };
-              const wonBotItem = { ...pvpBotAgent, instanceId: Date.now() + Math.random() + 1 };
-              
-              setInventory(prev => [wonBotItem, returnedPlayerItem, ...prev]);
-              setPvpStatus('idle');
-              setPvpPlayerAgent(null);
-              setPvpBotAgent(null);
-              alert(`MENANG! Anda mendapatkan ${wonBotItem.name}`);
-          };
-          
-          const handlePvpFinishLose = () => {
-              setPvpStatus('idle');
-              setPvpPlayerAgent(null);
-              setPvpBotAgent(null);
-          };
-
-          // --- ENCHANT LOGIC ---
-          const handleEnchant = () => {
-              if (!selectedAgent || !selectedStone) return;
-              if (stoneInventory[selectedStone] <= 0) return;
-              setEnchantStatus('processing');
-              playShakingSound(); 
-              setTimeout(() => {
-                  const stone = STONES[selectedStone];
-                  const rand = Math.random();
-                  const success = rand < stone.chance;
-                  setStoneInventory(prev => ({ ...prev, [selectedStone]: prev[selectedStone] - 1 }));
-                  if (success) {
-                      setEnchantStatus('success');
-                      playWinSound('epic'); 
-                      const currentRarityIndex = RARITY_ORDER.indexOf(selectedAgent.rarity);
-                      if (currentRarityIndex < RARITY_ORDER.length - 1) {
-                          const nextRarity = RARITY_ORDER[currentRarityIndex + 1];
-                          const upgradedAgent = { 
-                              ...selectedAgent, 
-                              rarity: nextRarity,
-                              sellPrice: selectedAgent.sellPrice * 3, 
-                              name: `[${nextRarity.toUpperCase()}] ${selectedAgent.name.replace(/^\[.*?\]\s/, '')}`, 
-                              instanceId: Date.now() + Math.random()
-                          };
-                          setInventory(prev => [upgradedAgent, ...prev.filter(i => i.instanceId !== selectedAgent.instanceId)]);
-                          setSelectedAgent(null); 
-                      } else {
-                           const upgradedAgent = { 
-                              ...selectedAgent, 
-                              sellPrice: selectedAgent.sellPrice * 2, 
-                              name: `MAX ${selectedAgent.name.replace(/^\[.*?\]\s/, '')}`,
-                              instanceId: Date.now() + Math.random()
-                          };
-                          setInventory(prev => [upgradedAgent, ...prev.filter(i => i.instanceId !== selectedAgent.instanceId)]);
-                          setSelectedAgent(null);
-                      }
-                  } else {
-                      setEnchantStatus('fail');
-                  }
-                  setTimeout(() => setEnchantStatus('idle'), 2000);
-              }, 2000);
+          const handleExchangeFinishLose = () => {
+              // Reset everything, item already removed from inventory at start
+              setExchangeItem(null);
+              setExchangeTarget(null);
+              setExchangeStatus('idle');
           };
 
           // --- OTHER HANDLERS ---
@@ -915,96 +855,71 @@
 
           return (
             <div className="min-h-screen pb-20 overflow-x-hidden touch-manipulation">
-              {/* NOTIFICATION */}
-              {stoneDropNotif && (
-                  <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-black/80 border border-yellow-500 text-yellow-400 px-6 py-3 rounded-full z-[100] animate-bounce font-bold shadow-[0_0_20px_rgba(234,179,8,0.5)]">
-                      BONUS DROP: {stoneDropNotif}!
-                  </div>
-              )}
-
               <header className="border-b border-gray-900 bg-black/90 backdrop-blur-md sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 py-3 md:py-4 flex flex-col md:flex-row justify-between items-center gap-3 md:gap-4">
                   <div className="flex items-center gap-2">
                     <div className="bg-red-600 p-1 rounded text-black shadow-[0_0_15px_rgba(220,38,38,0.5)]">
                       <ShieldCheck size={20} className="md:w-6 md:h-6" strokeWidth={2.5} />
                     </div>
-                    <h1 className="text-2xl md:text-3xl font-black italic tracking-tighter text-white">
-                      DARK<span className="text-red-600">CASE</span>
-                    </h1>
+                    <h1 className="text-2xl md:text-3xl font-black italic tracking-tighter text-white">DARK<span className="text-red-600">CASE</span></h1>
                   </div>
                   <div className="flex bg-gray-900/80 p-1 rounded-full border border-gray-800">
                     <button onClick={() => !isProcessing && setActiveTab('cases')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === 'cases' ? 'bg-red-600 text-black shadow-lg' : 'text-gray-400 hover:text-white'}`} disabled={isProcessing}>CASES</button>
-                    <button onClick={() => !isProcessing && setActiveTab('enchant')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === 'enchant' ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`} disabled={isProcessing}>ENCHANT</button>
-                    <button onClick={() => !isProcessing && setActiveTab('exchange')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === 'exchange' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`} disabled={isProcessing}>EXCHANGE</button>
-                    <button onClick={() => !isProcessing && setActiveTab('pvp')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === 'pvp' ? 'bg-orange-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`} disabled={isProcessing}>PVP ARENA</button>
+                    <button onClick={() => !isProcessing && setActiveTab('exchange')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === 'exchange' ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`} disabled={isProcessing}>EXCHANGE</button>
                   </div>
                   <div className="flex items-center gap-2 md:gap-4">
-                    <button onClick={() => setSoundEnabled(!soundEnabled)} className={`p-2 rounded-full border transition-all ${soundEnabled ? 'bg-gray-800 border-gray-700 text-green-400' : 'bg-red-900/20 border-red-900 text-red-500'}`}>
-                        {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-                    </button>
-                    <div className="flex flex-col items-end px-2">
-                        <span className="text-[10px] text-gray-500 font-bold">BALANCE</span>
-                        <span className="text-green-400 font-mono font-bold text-lg">{formatRupiah(balance)}</span>
-                    </div>
-                    <button onClick={() => setShowTopUp(true)} className="bg-green-600 hover:bg-green-500 text-black p-2 rounded-full shadow-lg active:scale-95 flex items-center gap-1 font-bold px-4">
-                        <Wallet size={18} strokeWidth={2.5} /> <span className="hidden md:inline">TOP UP</span>
-                    </button>
+                    <button onClick={() => setSoundEnabled(!soundEnabled)} className={`p-2 rounded-full border transition-all ${soundEnabled ? 'bg-gray-800 border-gray-700 text-green-400' : 'bg-red-900/20 border-red-900 text-red-500'}`}>{soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}</button>
+                    <div className="flex flex-col items-end px-2"><span className="text-[10px] text-gray-500 font-bold">BALANCE</span><span className="text-green-400 font-mono font-bold text-lg">{formatRupiah(balance)}</span></div>
+                    <button onClick={() => setShowTopUp(true)} className="bg-green-600 hover:bg-green-500 text-black p-2 rounded-full shadow-lg active:scale-95 flex items-center gap-1 font-bold px-4"><Wallet size={18} strokeWidth={2.5} /> <span className="hidden md:inline">TOP UP</span></button>
                   </div>
                 </div>
               </header>
 
               <main className="max-w-7xl mx-auto px-4 mt-6 md:mt-8 space-y-8 md:space-y-12">
-                
-                {/* --- CONTENT AREA SWITCHER --- */}
-                {activeTab === 'cases' && (
+                {activeTab === 'cases' ? (
                     <>
                         <section className="max-w-4xl mx-auto">
                             <div className="flex items-center justify-center gap-2 md:gap-8">
-                                <button onClick={handlePrevCase} disabled={isProcessing} className="p-3 bg-zinc-900 hover:bg-zinc-800 rounded-full border border-gray-800 disabled:opacity-30 transition-all active:scale-95">
-                                    <ChevronLeft size={24} className="text-white" />
-                                </button>
+                                <button onClick={handlePrevCase} disabled={isProcessing} className="p-3 bg-zinc-900 hover:bg-zinc-800 rounded-full border border-gray-800 disabled:opacity-30 transition-all active:scale-95"><ChevronLeft size={24} className="text-white" /></button>
                                 <div className={`relative w-full max-w-md p-6 rounded-xl border-2 text-center transition-all duration-300 ${currentCase.color} bg-zinc-900/90 shadow-2xl`}>
                                      <button onClick={() => setInfoCase(currentCase)} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors z-20 bg-black/50 p-1 rounded-full border border-gray-700"><Info size={20} /></button>
-                                     <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#050505] p-2 rounded-full border border-gray-800">
-                                         {currentCase.icon}
-                                     </div>
+                                     <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#050505] p-2 rounded-full border border-gray-800">{activeTab === 'cases' ? currentCase.icon : <Package size={40} className={currentCase.iconColor} strokeWidth={1.5} />}</div>
                                      <div className="mt-4">
                                         <h3 className={`text-3xl font-black italic ${currentCase.iconColor} mb-2`}>{currentCase.name}</h3>
-                                        <p className="text-gray-400 text-sm mb-6">{currentCase.desc}</p>
-                                        <div className="inline-flex items-center gap-3 bg-black/60 px-6 py-3 rounded-lg border border-gray-800">
-                                            <span className="text-gray-500 text-xs font-mono uppercase tracking-widest">COST</span>
-                                            <span className={`font-mono font-bold text-xl ${currentCase.iconColor}`}>{formatRupiah(currentCase.price)}</span>
-                                        </div>
+                                        <p className="text-gray-400 text-sm mb-6">{activeTab === 'box' ? 'Random mystery box drop.' : currentCase.desc}</p>
+                                        <div className="inline-flex items-center gap-3 bg-black/60 px-6 py-3 rounded-lg border border-gray-800"><span className="text-gray-500 text-xs font-mono uppercase tracking-widest">COST</span><span className={`font-mono font-bold text-xl ${currentCase.iconColor}`}>{formatRupiah(currentCase.price)}</span></div>
                                      </div>
                                 </div>
-                                <button onClick={handleNextCase} disabled={isProcessing} className="p-3 bg-zinc-900 hover:bg-zinc-800 rounded-full border border-gray-800 disabled:opacity-30 transition-all active:scale-95">
-                                    <ChevronRight size={24} className="text-white" />
-                                </button>
+                                <button onClick={handleNextCase} disabled={isProcessing} className="p-3 bg-zinc-900 hover:bg-zinc-800 rounded-full border border-gray-800 disabled:opacity-30 transition-all active:scale-95"><ChevronRight size={24} className="text-white" /></button>
                             </div>
-                            <div className="flex justify-center gap-2 mt-6">
-                                {CASES.map((c, idx) => (
-                                    <div key={c.id} className={`w-2 h-2 rounded-full transition-all ${currentCase.id === c.id ? `bg-white w-6` : 'bg-gray-800'}`} />
-                                ))}
-                            </div>
+                            <div className="flex justify-center gap-2 mt-6">{CASES.map((c, idx) => (<div key={c.id} className={`w-2 h-2 rounded-full transition-all ${currentCase.id === c.id ? `bg-white w-6` : 'bg-gray-800'}`} />))}</div>
                         </section>
 
                         <section className="relative pt-4 md:pt-8 pb-4 min-h-[350px] flex flex-col justify-center">
-                            <div className="relative max-w-5xl mx-auto w-full">
-                                <div className="absolute left-1/2 -translate-x-1/2 top-0 z-30 flex flex-col items-center pointer-events-none">
-                                   <div className="w-0 h-0 border-l-[10px] md:border-l-[12px] border-l-transparent border-r-[10px] md:border-r-[12px] border-r-transparent border-t-[16px] md:border-t-[20px] border-t-red-600 drop-shadow-lg"></div>
-                                   <div className="w-[2px] h-[260px] bg-red-600/50 shadow-[0_0_10px_rgba(220,38,38,0.8)]"></div>
+                            {activeTab === 'cases' ? (
+                                <div className="relative max-w-5xl mx-auto w-full">
+                                    <div className="absolute left-1/2 -translate-x-1/2 top-0 z-30 flex flex-col items-center pointer-events-none">
+                                       <div className="w-0 h-0 border-l-[10px] md:border-l-[12px] border-l-transparent border-r-[10px] md:border-r-[12px] border-r-transparent border-t-[16px] md:border-t-[20px] border-t-red-600 drop-shadow-lg"></div>
+                                       <div className="w-[2px] h-[260px] bg-red-600/50 shadow-[0_0_10px_rgba(220,38,38,0.8)]"></div>
+                                    </div>
+                                    <div ref={containerRef} className={`relative w-full h-[260px] bg-[#080808] border-y-[4px] border-[#222] overflow-hidden rounded-lg shadow-2xl transition-colors ${currentCase.color.replace('border', 'shadow')}`}>
+                                      <div className="absolute inset-y-0 left-0 w-16 md:w-48 bg-gradient-to-r from-black via-black/80 to-transparent z-20 pointer-events-none"></div>
+                                      <div className="absolute inset-y-0 right-0 w-16 md:w-48 bg-gradient-to-l from-black via-black/80 to-transparent z-20 pointer-events-none"></div>
+                                      <div ref={railRef} className="absolute top-0 left-0 h-full flex items-center" style={{ willChange: 'transform' }}>
+                                        {spinItems.map((item, index) => (<div key={index} className="flex-shrink-0" style={{ width: `${CARD_WIDTH}px`, marginLeft: `${CARD_MARGIN_X}px`, marginRight: `${CARD_MARGIN_X}px` }}><GachaCard agent={item} /></div>))}
+                                      </div>
+                                    </div>
                                 </div>
-                                <div ref={containerRef} className={`relative w-full h-[260px] bg-[#080808] border-y-[4px] border-[#222] overflow-hidden rounded-lg shadow-2xl transition-colors ${currentCase.color.replace('border', 'shadow')}`}>
-                                  <div className="absolute inset-y-0 left-0 w-16 md:w-48 bg-gradient-to-r from-black via-black/80 to-transparent z-20 pointer-events-none"></div>
-                                  <div className="absolute inset-y-0 right-0 w-16 md:w-48 bg-gradient-to-l from-black via-black/80 to-transparent z-20 pointer-events-none"></div>
-                                  <div ref={railRef} className="absolute top-0 left-0 h-full flex items-center" style={{ willChange: 'transform' }}>
-                                    {spinItems.map((item, index) => (<div key={index} className="flex-shrink-0" style={{ width: `${CARD_WIDTH}px`, marginLeft: `${CARD_MARGIN_X}px`, marginRight: `${CARD_MARGIN_X}px` }}><GachaCard agent={item} /></div>))}
-                                  </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center w-full h-[300px] relative">
+                                    {boxPhase === 'idle' && (<div className={`transform transition-all duration-300 hover:scale-105 cursor-pointer opacity-70 hover:opacity-100`} onClick={handleBuyBox}><div className={`w-40 h-40 ${currentCase.bg} rounded-3xl border-4 ${currentCase.color} border-dashed flex items-center justify-center`}><Package size={60} className={currentCase.iconColor} strokeWidth={1} /></div><div className="text-center mt-4 text-gray-500 text-xs tracking-widest font-mono">PURCHASE TO REVEAL</div></div>)}
+                                    {(boxPhase === 'purchased' || boxPhase === 'shaking') && (<div className="animate-shake relative group" onClick={boxPhase === 'purchased' ? handleOpenBox : null} title="Klik untuk membuka!"><div className={`w-56 h-56 bg-zinc-900 rounded-3xl border-4 ${currentCase.color} flex items-center justify-center shadow-[0_0_80px_rgba(255,255,255,0.15)]`}><Package size={100} className="text-white drop-shadow-lg" strokeWidth={1.5} /></div>{boxPhase === 'purchased' && (<div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-red-600 text-white font-black text-xs px-3 py-1 rounded-full animate-bounce whitespace-nowrap">KETUK UNTUK BUKA!<div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-red-600 rotate-45"></div></div>)}</div>)}
+                                    {boxPhase === 'opening' && (<div className="relative flex items-center justify-center"><div className={`w-56 h-56 bg-white rounded-3xl flex items-center justify-center animate-pop-open`}></div><ConfettiExplosion /></div>)}
                                 </div>
-                            </div>
+                            )}
 
-                            {!isProcessing && (
-                                <div className="mt-8 md:mt-12 flex flex-col items-center gap-4">
+                            {!isProcessing && boxPhase === 'idle' && (
+                                <div className="mt-8 md:mt-12 flex flex-col items-center gap-4 md:gap-6">
                                     <div className="flex gap-4">
                                         <button onClick={() => performGacha(1)} disabled={isProcessing} className={`group relative w-32 md:w-40 px-4 py-4 rounded transform skew-x-[-10deg] transition-all duration-200 active:scale-95 ${isProcessing ? 'bg-gray-800 cursor-not-allowed opacity-50' : `bg-gray-800 border-2 border-gray-600 hover:border-white text-white hover:scale-105`}`}>
                                           <div className="skew-x-[10deg] flex flex-col items-center">
@@ -1023,79 +938,8 @@
                             )}
                         </section>
                     </>
-                )}
-
-                {activeTab === 'enchant' && (
-                    <section className="max-w-5xl mx-auto min-h-[500px] flex flex-col items-center justify-center p-4">
-                        <div className="text-center mb-8">
-                            <h2 className="text-4xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 mb-2">ENCHANT ALTAR</h2>
-                            <p className="text-gray-400 text-sm">Upgrade agent untuk melipatgandakan nilainya. Hati-hati, jika gagal batu akan hilang.</p>
-                        </div>
-
-                        <div className="flex flex-col md:flex-row items-center gap-8 w-full">
-                            {/* LEFT: AGENT SLOT */}
-                            <div className="flex-1 w-full flex flex-col items-center">
-                                <div className="text-sm text-gray-500 mb-2 font-bold tracking-widest">AGENT</div>
-                                <div className={`w-48 h-64 border-2 border-dashed ${selectedAgent ? 'border-purple-500 bg-purple-900/20' : 'border-gray-700 bg-gray-900/50'} rounded-xl flex items-center justify-center relative overflow-hidden transition-all`}>
-                                    {selectedAgent ? (
-                                        <div className="w-full h-full relative group">
-                                            <img src={selectedAgent.img} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                                            <div className="absolute bottom-0 w-full bg-black/80 p-2 text-center">
-                                                <p className="text-xs font-bold text-white truncate">{selectedAgent.name}</p>
-                                                <p className="text-green-400 text-[10px] font-mono">{formatRupiah(selectedAgent.sellPrice)}</p>
-                                            </div>
-                                            <button onClick={() => setSelectedAgent(null)} className="absolute top-2 right-2 bg-red-600 rounded-full p-1 hover:scale-110 transition-transform"><XIcon size={12} /></button>
-                                        </div>
-                                    ) : (
-                                        <div className="text-gray-600 text-center p-4">
-                                            <ShieldCheck size={48} className="mx-auto mb-2 opacity-50" />
-                                            <p className="text-xs">Pilih dari Inventory di bawah</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* CENTER: ACTION */}
-                            <div className="flex flex-col items-center gap-4">
-                                {enchantStatus === 'processing' ? (
-                                    <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                                ) : (
-                                    <button 
-                                        onClick={handleEnchant}
-                                        disabled={!selectedAgent || !selectedStone || enchantStatus !== 'idle'}
-                                        className={`w-20 h-20 rounded-full flex items-center justify-center border-4 transition-all shadow-[0_0_30px_rgba(168,85,247,0.3)]
-                                            ${(!selectedAgent || !selectedStone) ? 'border-gray-700 bg-gray-800 text-gray-500 cursor-not-allowed' : 'border-purple-500 bg-purple-600 text-white hover:scale-110 hover:shadow-[0_0_50px_rgba(168,85,247,0.8)] cursor-pointer enchant-glow'}
-                                        `}
-                                    >
-                                        <Hammer size={32} />
-                                    </button>
-                                )}
-                                {enchantStatus === 'success' && <div className="text-green-400 font-black text-xl animate-bounce">SUKSES!</div>}
-                                {enchantStatus === 'fail' && <div className="text-red-500 font-black text-xl animate-shake">GAGAL...</div>}
-                            </div>
-
-                            {/* RIGHT: STONE SLOT */}
-                            <div className="flex-1 w-full flex flex-col items-center">
-                                <div className="text-sm text-gray-500 mb-2 font-bold tracking-widest">STONE</div>
-                                <div className="flex gap-2">
-                                    {Object.entries(STONES).map(([key, stone]) => (
-                                        <button 
-                                            key={key}
-                                            onClick={() => setSelectedStone(key)}
-                                            className={`relative w-20 h-24 border-2 ${selectedStone === key ? `${stone.border} bg-opacity-30` : 'border-gray-800 bg-opacity-10'} ${stone.bg} rounded-lg flex flex-col items-center justify-center p-2 transition-all hover:scale-105`}
-                                        >
-                                            <Gem size={24} className={stone.color} />
-                                            <span className={`text-[10px] font-bold mt-2 ${stone.color}`}>{stone.chance * 100}%</span>
-                                            <span className="text-[10px] text-gray-400 mt-1">x{stoneInventory[key]}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                )}
-                
-                {activeTab === 'exchange' && (
+                ) : (
+                    /* --- EXCHANGE UI (CARD FLIP) --- */
                     <section className="max-w-5xl mx-auto min-h-[500px] flex flex-col items-center justify-center p-4">
                         <div className="text-center mb-6">
                             <h2 className="text-4xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 mb-2">EXCHANGE ALTAR</h2>
@@ -1211,144 +1055,6 @@
                         )}
                     </section>
                 )}
-                
-                {activeTab === 'pvp' && (
-                    <section className="max-w-5xl mx-auto min-h-[500px] flex flex-col items-center justify-center p-4">
-                        {/* PVP HEADER */}
-                        <div className="text-center mb-6">
-                            <h2 className="text-4xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-600 mb-2">PVP ARENA</h2>
-                            <p className="text-gray-400 text-sm">Bertaruh 1 vs 1. Pemenang mengambil semuanya.</p>
-                        </div>
-
-                        {pvpStatus === 'idle' && (
-                            <div className="border-2 border-dashed border-gray-700 bg-gray-900/50 rounded-xl p-8 text-center w-full max-w-md">
-                                <Swords size={48} className="mx-auto mb-4 text-orange-500 opacity-50" />
-                                <p className="text-gray-400 mb-2">Pilih petarung dari Inventory di bawah.</p>
-                            </div>
-                        )}
-
-                        {/* SELECTION PREVIEW */}
-                        {pvpStatus === 'ready' && pvpPlayerAgent && (
-                             <div className="w-full flex flex-col items-center animate-in zoom-in duration-300">
-                                 <div className="flex items-center gap-8 mb-8">
-                                     {/* PLAYER */}
-                                     <div className="flex flex-col items-center">
-                                         <div className="text-blue-400 font-bold mb-2">YOU</div>
-                                         <div className={`w-40 h-40 border-4 border-blue-500 bg-black rounded-lg overflow-hidden relative`}>
-                                             <img src={pvpPlayerAgent.img} className="w-full h-full object-cover" />
-                                             <div className="absolute bottom-0 w-full bg-blue-900/80 text-center py-1">
-                                                 <p className="text-white font-bold text-xs">HP: {formatRupiah(pvpPlayerAgent.sellPrice)}</p>
-                                             </div>
-                                         </div>
-                                     </div>
-
-                                     <div className="text-2xl font-black text-white">VS</div>
-
-                                     {/* BOT (HIDDEN INITIALLY OR SHOWN?) - User said "Bot mempertaruhkan milik musuh" */}
-                                     <div className="flex flex-col items-center">
-                                         <div className="text-red-500 font-bold mb-2">ENEMY</div>
-                                         <div className={`w-40 h-40 border-4 border-red-500 bg-black rounded-lg overflow-hidden relative flex items-center justify-center`}>
-                                             {pvpBotAgent ? (
-                                                  <>
-                                                      <img src={pvpBotAgent.img} className="w-full h-full object-cover opacity-50 grayscale" />
-                                                      <span className="absolute text-red-500 font-black text-3xl">?</span>
-                                                  </>
-                                             ) : <div className="text-gray-500">Waiting...</div>}
-                                         </div>
-                                     </div>
-                                 </div>
-                                 
-                                 <button onClick={startPvpBattle} className="bg-red-600 hover:bg-red-500 text-white font-black px-10 py-4 rounded-lg shadow-[0_0_30px_rgba(220,38,38,0.5)] active:scale-95 transition-transform text-xl">
-                                     FIGHT!
-                                 </button>
-                             </div>
-                        )}
-
-                        {/* BATTLE ARENA */}
-                        {(pvpStatus === 'battle' || pvpStatus === 'result_win' || pvpStatus === 'result_lose') && pvpPlayerAgent && pvpBotAgent && (
-                            <div className="w-full max-w-4xl">
-                                {/* HP BARS */}
-                                <div className="flex justify-between items-center mb-8 gap-4">
-                                    <div className="flex-1">
-                                        <div className="flex justify-between text-xs mb-1">
-                                            <span className="text-blue-400 font-bold">{pvpPlayerAgent.name}</span>
-                                            <span className="text-gray-400">{formatRupiah(pvpPlayerHp)} / {formatRupiah(pvpMaxPlayerHp)}</span>
-                                        </div>
-                                        <div className="h-4 bg-gray-800 rounded-full overflow-hidden border border-gray-700">
-                                            <div className="h-full bg-blue-500 health-transition" style={{ width: `${(pvpPlayerHp / pvpMaxPlayerHp) * 100}%` }}></div>
-                                        </div>
-                                    </div>
-                                    <div className="text-xl font-black text-gray-600 px-2">VS</div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between text-xs mb-1">
-                                            <span className="text-gray-400">{formatRupiah(pvpBotHp)} / {formatRupiah(pvpMaxBotHp)}</span>
-                                            <span className="text-red-500 font-bold">{pvpBotAgent.name}</span>
-                                        </div>
-                                        <div className="h-4 bg-gray-800 rounded-full overflow-hidden border border-gray-700">
-                                            <div className="h-full bg-red-500 health-transition" style={{ width: `${(pvpBotHp / pvpMaxBotHp) * 100}%` }}></div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* FIGHTERS */}
-                                <div className="flex justify-between items-center relative mb-8">
-                                    {/* Player */}
-                                    <div className={`w-32 h-32 md:w-48 md:h-48 border-4 border-blue-500 rounded-xl overflow-hidden relative transition-transform duration-100 ${pvpTurn === 'bot' ? 'animate-hit' : ''}`}>
-                                        <img src={pvpPlayerAgent.img} className="w-full h-full object-cover" />
-                                        {/* Damage Number Popup would go here */}
-                                    </div>
-
-                                    {/* Action / Result */}
-                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-                                        {pvpStatus === 'battle' ? (
-                                            pvpTurn === 'player' ? (
-                                                <button onClick={handlePvpAttack} className="bg-orange-500 hover:bg-orange-400 text-black font-black w-24 h-24 rounded-full border-4 border-white shadow-[0_0_30px_rgba(249,115,22,0.6)] active:scale-90 transition-all text-xl">
-                                                    ATTACK
-                                                </button>
-                                            ) : (
-                                                <div className="text-red-500 font-bold animate-pulse text-center">DEFEND!</div>
-                                            )
-                                        ) : (
-                                            <div className={`text-4xl font-black ${pvpStatus === 'result_win' ? 'text-green-400' : 'text-red-600'} drop-shadow-lg`}>
-                                                {pvpStatus === 'result_win' ? 'YOU WIN!' : 'DEFEATED'}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Bot */}
-                                    <div className={`w-32 h-32 md:w-48 md:h-48 border-4 border-red-500 rounded-xl overflow-hidden relative transition-transform duration-100 ${pvpTurn === 'player' ? 'animate-hit' : ''}`}>
-                                        <img src={pvpBotAgent.img} className="w-full h-full object-cover" />
-                                        {pvpTurn === 'player' && <div className="slash-effect"></div>}
-                                    </div>
-                                </div>
-
-                                {/* LOGS */}
-                                <div className="bg-black/40 h-32 overflow-y-auto p-4 rounded border border-gray-800 text-xs font-mono space-y-1 no-scrollbar">
-                                    {pvpLogs.map((log, i) => (
-                                        <div key={i} className={log.includes('You') ? 'text-green-400' : (log.includes('Battle') ? 'text-yellow-400 text-center font-bold my-2' : 'text-red-400')}>
-                                            {log}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* RESULT ACTIONS */}
-                                {pvpStatus !== 'battle' && (
-                                    <div className="flex justify-center mt-6">
-                                        {pvpStatus === 'result_win' ? (
-                                            <button onClick={handlePvpClaimWin} className="bg-green-600 hover:bg-green-500 text-black font-black px-8 py-3 rounded shadow-lg animate-bounce">
-                                                AMBIL HADIAH ({formatRupiah(pvpBotAgent.sellPrice)})
-                                            </button>
-                                        ) : (
-                                            <button onClick={handlePvpFinishLose} className="bg-gray-700 hover:bg-gray-600 text-white font-bold px-8 py-3 rounded">
-                                                KEMBALI
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </section>
-                )}
 
                 {/* --- INVENTORY (SHARED) --- */}
                 <section className="bg-[#0a0a0a] border border-gray-900 rounded-xl p-4 md:p-6 min-h-[400px]">
@@ -1368,16 +1074,8 @@
                         key={item.instanceId} 
                         item={item} 
                         onSell={() => handleSell(item)}
-                        onSelect={
-                            activeTab === 'exchange' && exchangeStatus === 'idle' ? () => handleExchangeSelect(item) : 
-                            activeTab === 'enchant' && enchantStatus === 'idle' ? () => setSelectedAgent(item) :
-                            activeTab === 'pvp' && pvpStatus === 'idle' ? () => handlePvpSelect(item) : null
-                        }
-                        isSelected={
-                            (exchangeItem && exchangeItem.instanceId === item.instanceId) ||
-                            (selectedAgent && selectedAgent.instanceId === item.instanceId) ||
-                            (pvpPlayerAgent && pvpPlayerAgent.instanceId === item.instanceId)
-                        }
+                        onSelect={activeTab === 'exchange' && exchangeStatus === 'idle' ? () => handleExchangeSelect(item) : null}
+                        isSelected={exchangeItem && exchangeItem.instanceId === item.instanceId}
                       />
                     ))}
                     {inventory.length === 0 && (
@@ -1406,19 +1104,21 @@
                             </div>
                         ))}
                     </div>
-                    {/* INFO BATU DI SEMUA CASE */}
-                    <div className="mb-6 space-y-2 border-t border-gray-800 pt-4">
-                        <h4 className="text-sm font-bold text-yellow-500 uppercase tracking-widest mb-3">BONUS STONE DROPS</h4>
-                        <div className="flex justify-between text-xs text-gray-400">
-                            <span>Weak Stone (25%)</span> <span>10% Chance</span>
-                        </div>
-                        <div className="flex justify-between text-xs text-blue-400">
-                            <span>Great Stone (50%)</span> <span>2% Chance</span>
-                        </div>
-                        <div className="flex justify-between text-xs text-yellow-400">
-                            <span>Divine Stone (80%)</span> <span>0.1% Chance</span>
-                        </div>
-                    </div>
+                    {/* INFO BATU DI GOD CASE */}
+                    {infoCase.id === 'case_god' && (
+                         <div className="mb-6 space-y-2 border-t border-gray-800 pt-4">
+                            <h4 className="text-sm font-bold text-yellow-500 uppercase tracking-widest mb-3">BONUS STONE DROPS</h4>
+                            <div className="flex justify-between text-xs text-gray-400">
+                                <span>Weak Stone (25%)</span> <span>20% Chance</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-blue-400">
+                                <span>Great Stone (50%)</span> <span>5% Chance</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-yellow-400">
+                                <span>Divine Stone (80%)</span> <span>0.1% Chance</span>
+                            </div>
+                         </div>
+                    )}
                     <div>
                         <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">CONTENTS</h4>
                         <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-2 no-scrollbar">
